@@ -128,7 +128,7 @@ class MarketMaker( object ):
         self.startTime = int(time.time()*1000)
         self.arbmult = {}
         self.arbmult['BTC'] = {}
-        self.arbmult['ETH'] = {}
+        self.arbmult[token] = {}
         self.totrade = ['bybit','bitmex', 'deribit']
         self.deltas             = OrderedDict()
         self.futures            = {}
@@ -1039,7 +1039,7 @@ class MarketMaker( object ):
 
                     else:
                         try:
-                            if self.arbmult['ETH'][ex]['long'] != ex:
+                            if self.arbmult[token][ex]['long'] != ex:
                                 self.mex.Order.Order_new(symbol=fut, orderQty=qty, price=prc,execInst="ParticipateDoNotInitiate").result()
 
                         except (SystemExit, KeyboardInterrupt):
@@ -1137,7 +1137,7 @@ class MarketMaker( object ):
                 t_ts = t_now
             sleep(0.01)
             size = int (100)
-            for coins in self.exchangeRates:
+            for coins2 in self.exchangeRates:
                 wh = ""
                 wl = ""
                 l = 99
@@ -1145,28 +1145,28 @@ class MarketMaker( object ):
                 longs = 0
                 shorts = 0
                 zeros = 0
-                for funding in self.exchangeRates[coins]:
+                for funding in self.exchangeRates[coins2]:
                     
                 
-                    if self.exchangeRates[coins][funding] > h:
-                        h = self.exchangeRates[coins][funding]
+                    if self.exchangeRates[coins2][funding] > h:
+                        h = self.exchangeRates[coins2][funding]
                         wh = funding
-                    if self.exchangeRates[coins][funding] < l:
-                        l = self.exchangeRates[coins][funding]
+                    if self.exchangeRates[coins2][funding] < l:
+                        l = self.exchangeRates[coins2][funding]
                         wl =  funding
                 wh2 = ""
                 wl2 = ""
-                for funding in self.exchangeRates[coins]:
+                for funding in self.exchangeRates[coins2]:
 
-                    if self.exchangeRates[coins][funding] > 0:
+                    if self.exchangeRates[coins2][funding] > 0:
                         shorts = shorts + 1
-                    if self.exchangeRates[coins][funding] < 0:
+                    if self.exchangeRates[coins2][funding] < 0:
                         longs  = longs  + 1
                         
-                    if self.exchangeRates[coins][funding] == h:
+                    if self.exchangeRates[coins2][funding] == h:
                         wh2 = funding
                     
-                    if self.exchangeRates[coins][funding] == l:
+                    if self.exchangeRates[coins2][funding] == l:
                         wl2 = funding
                 winner = ""
                 coin = ""
@@ -1263,9 +1263,9 @@ class MarketMaker( object ):
                 
                 for anExchange in self.totrade:
                     if positive == True:
-                        self.arbmult[coins][anExchange]=({"long": "others", "short": winner})
+                        self.arbmult[coins2][anExchange]=({"long": "others", "short": winner})
                     else:
-                        self.arbmult[coins][anExchange]=({"long": winner, "short": "others"})
+                        self.arbmult[coins2][anExchange]=({"long": winner, "short": "others"})
                 #print('shorting n longing')
                 print(self.arbmult)
             
