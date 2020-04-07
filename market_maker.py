@@ -688,7 +688,7 @@ class MarketMaker( object ):
 
                         except (SystemExit, KeyboardInterrupt):
                             raise
-                        except:
+                        except: 
                             try:
                                 if self.arbmult[token][ex]['long'] == ex or self.arbmult[token][ex]['short'] != ex :
                                     if ex == 'deribit':
@@ -1025,6 +1025,7 @@ class MarketMaker( object ):
                     MAX_SKEW = qty * 1.5
                     
                     qty = int(qty)
+                    qty = qty * -1 #mex
                     self.PCT_LIM_SHORT  = self.maxqty * 25
                     self.PCT_LIM_LONG  = self.maxqty * 25
 
@@ -1032,7 +1033,7 @@ class MarketMaker( object ):
                        
                     #print('skew_size: ' + str(skew_size))
                     #print('max_soew: ' + str(MAX_SKEW))
-                    if qty + skew_size * -1 >  MAX_SKEW:
+                    if qty * -1 + skew_size * -1 >  MAX_SKEW:
                         #print('offer max_skew return ...')
                         for xyz in ask_ords:
                             cancel_oids.append( xyz['orderID'] )
