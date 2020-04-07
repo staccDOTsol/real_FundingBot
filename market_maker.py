@@ -70,7 +70,7 @@ CONTRACT_SIZE       = 10        # USD
 COV_RETURN_CAP      = 100       # cap on variance for vol estimate
 DECAY_POS_LIM       = 0.1       # position lim decay factor toward expiry
 LOG_LEVEL           = logging.INFO
-MIN_ORDER_SIZE      = 18
+MIN_ORDER_SIZE      = 24
 MAX_LAYERS          =  1        # max orders to layer the ob with on each side
 MKT_IMPACT          =  0.5      # base 1-sided spread between bid/offer
 PCT                 = 100 * BP  # one percentage point
@@ -106,12 +106,12 @@ class MarketMaker( object ):
 
         self.percs = {}
         self.maxqty = 25
-        self.PCT_LIM_LONG        = self.maxqty * 25       # % position limit long
+        self.PCT_LIM_LONG        = self.maxqty * 20       # % position limit long
 
-        self.PCT_LIM_SHORT       = self.maxqty * 25      # % position limit short
-        self.PCT_LIM_LONG_OLD        = self.maxqty * 25       # % position limit long
+        self.PCT_LIM_SHORT       = self.maxqty * 20      # % position limit short
+        self.PCT_LIM_LONG_OLD        = self.maxqty * 20       # % position limit long
 
-        self.PCT_LIM_SHORT_OLD       = self.maxqty * 25      # % position limit short
+        self.PCT_LIM_SHORT_OLD       = self.maxqty * 20      # % position limit short
         self.PCT_LIM_LONG        *= PCT
         self.PCT_LIM_SHORT       *= PCT
         self.equity_usd         = None
@@ -609,449 +609,162 @@ class MarketMaker( object ):
             
 
 
-        
-    def execute_bids ( self, ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords):
-        token = 'BTC'
-        if 'ETH' in fut:
-            token = 'ETH'
-        for i in range( max( nbids, nasks )):
-            # BIDS
+    def execute_arb ( self, ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords):
+        for coin in self.arbmult:
+            qty = round ( float(prc) * qtybtc )
+            if qty > self.maxqty:
+                self.maxqty = qty
+            if ex == 'deribit' and coin == 'BTC':
+                qty = qty / 10
+            
+            qty = int(qty)
+            MAX_SKEW = qty * 1.5
+            self.PCT_LIM_SHORT  = self.maxqty * 20
+            self.PCT_LIM_LONG  = self.maxqty * 20
+            # bid edit
+            try:
+                prc = self.get_bbo['bid']
+            except:
+                print('no bid, returning')
+                return
+            try: 
+                oid = bid_ords[ i ][ 'orderId' ]
+            except:
+                oid = bid_ords[ i ][ 'orderID' ]
+            try:
+                if ex == 'deribit':
+                    self.client.edit( oid, qty, prc )
+                if ex == 'bybit':
+                    self.bit.Order.Order_replace(order_id=oid, symbol=fut).result()
+                if ex == 'bitmex':
+                    self.mex.Order.Order_amend(orderID=oid, price=prc).result()
+            except:
+                abc = 123
+            # ask edit
+            try:
+                prc = self.get_bbo['ask']
+            except:
+                print('no ask, returning')
+                return
+            try: 
+                oid = ask_ords[ i ][ 'orderId' ]
+            except:
+                oid = ask_ords[ i ][ 'orderID' ]
+            try:
+                if ex == 'deribit':
+                    self.client.edit( oid, qty, prc )
+                if ex == 'bybit':
+                    self.bit.Order.Order_replace(order_id=oid, symbol=fut).result()
+                if ex == 'bitmex':
+                    self.mex.Order.Order_amend(orderID=oid, price=prc).result()
+            except:
+                abc = 123
+            
+            # Long
+            if self.arbmult[token][ex]['long'] == ex: # Ok! You win! You can long!
+                if qty + skew_size >  MAX_SKEW:
+                    print('max skew, returning')
+                    return
+                if ex == 'deribit':
+                    for fut in self.futures['deribit']:
+                        if coin in fut:
+                            self.client.buy( fut, qty, self.get_bbo(ex, fut)['bid'], 'true' )
+                    for fut in self.futures['bybit']:
+                        if coin in fut:
+                             self.bit.Order.Order_new(side="Sell",symbol=fut,order_type="Limit",qty=qty,price=self.get_bbo(ex, fut)['ask'],time_in_force="PostOnly").result()
+                    if coin == 'BTC':
+                        fut = 'XBTUSD'
+                    else:
+                        fut = 'ETHUSD'
+                    self.mex.Order.Order_new(symbol=fut, orderQty=-1 * qty, price=self.get_bbo(ex, fut)['ask'],execInst="ParticipateDoNotInitiate").result()
+         
+         
+                if ex == 'bybit':
+                    for fut in self.futures['bybit']:
+                        if coin in fut:
+                             self.bit.Order.Order_new(side="Buy",symbol=fut,order_type="Limit",qty=qty,price=self.get_bbo(ex, fut)['bid'],time_in_force="PostOnly").result()
+                    for fut in self.futures['deribit']:
+                        if coin in fut:
+                            self.client.sell( fut, qty, self.get_bbo(ex, fut)['ask'], 'true' )
+                    if coin == 'BTC':
+                        fut = 'XBTUSD'
+                    else:
+                        fut = 'ETHUSD'
+                    self.mex.Order.Order_new(symbol=fut, orderQty=-1 * qty, price=self.get_bbo(ex, fut)['ask'],execInst="ParticipateDoNotInitiate").result()
+         
+
+
+
+
+                if ex == 'bitmex':
+                    if coin == 'BTC':
+                        fut = 'XBTUSD'
+                    else:
+                        fut = 'ETHUSD'
+                    self.bit.Order.Order_new(symbol=fut, orderQty=qty, price=self.get_bbo(ex, fut)['bid'],execInst="ParticipateDoNotInitiate").result()
+                    for fut in self.futures['deribit']:
+                        if coin in fut:
+                            self.client.sell( fut, qty, self.get_bbo(ex, fut)['ask'], 'true' )
+                    for fut in self.futures['bybit']:
+                        if coin in fut:
+                             self.bit.Order.Order_new(side="Sell",symbol=fut,order_type="Limit",qty=qty,price=self.get_bbo(ex, fut)['ask'],time_in_force="PostOnly").result()
+                    
+
+                self.execute_cancels(ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
+            # Short
+            if self.arbmult[token][ex]['short'] == ex: # Ok! You win! You can short!
+            
+                if qty + skew_size * -1 >  MAX_SKEW:
+                    print('offer max_skew return ...')
+                    return
+
+                if ex == 'deribit':
+                    for fut in self.futures['deribit']:
+                        if coin in fut:
+                            self.client.sell( fut, qty, self.get_bbo(ex, fut)['ask'], 'true' )
+                    for fut in self.futures['bybit']:
+                        if coin in fut:
+                             self.bit.Order.Order_new(side="Buy",symbol=fut,order_type="Limit",qty=qty,price=self.get_bbo(ex, fut)['bid'],time_in_force="PostOnly").result()
+                    if coin == 'BTC':
+                        fut = 'XBTUSD'
+                    else:
+                        fut = 'ETHUSD'
+                    self.mex.Order.Order_new(symbol=fut, orderQty=-qty, price=self.get_bbo(ex, fut)['bid'],execInst="ParticipateDoNotInitiate").result()
+         
+         
+                if ex == 'bybit':
+                    for fut in self.futures['bybit']:
+                        if coin in fut:
+                             self.bit.Order.Order_new(side="Sell",symbol=fut,order_type="Limit",qty=qty,price=self.get_bbo(ex, fut)['ask'],time_in_force="PostOnly").result()
+                    for fut in self.futures['deribit']:
+                        if coin in fut:
+                            self.client.buy( fut, qty, self.get_bbo(ex, fut)['ask'], 'true' )
+                    if coin == 'BTC':
+                        fut = 'XBTUSD'
+                    else:
+                        fut = 'ETHUSD'
+                    self.mex.Order.Order_new(symbol=fut, orderQty=qty, price=self.get_bbo(ex, fut)['bid'],execInst="ParticipateDoNotInitiate").result()
+         
+
+
+
+
+                if ex == 'bitmex':
+                    if coin == 'BTC':
+                        fut = 'XBTUSD'
+                    else:
+                        fut = 'ETHUSD'
+                    self.bit.Order.Order_new(symbol=fut, orderQty=-1 * qty, price=self.get_bbo(ex, fut)['ask'],execInst="ParticipateDoNotInitiate").result()
+                    for fut in self.futures['deribit']:
+                        if coin in fut:
+                            self.client.buy( fut, qty, self.get_bbo(ex, fut)['bid'], 'true' )
+                    for fut in self.futures['bybit']:
+                        if coin in fut:
+                             self.bit.Order.Order_new(side="Buy",symbol=fut,order_type="Limit",qty=qty,price=self.get_bbo(ex, fut)['bid'],time_in_force="PostOnly").result()
+                    
+                self.execute_cancels(ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
             
             
-            if ex == 'deribit':
-            
-                if place_bids and i < nbids:
-                    
-                    if i > 0:
-                        prc = ticksize_floor( min( bids[ i ], bids[ i - 1 ] - tsz ), tsz )
-                    else:
-                        prc = bids[ 0 ]
-                    
-                    qty = round ( float(prc) * qtybtc )  
-                    if 'BTC' in fut:
-                        qty = qty / 10
-                    #0.31428571428571428571428571428571
-                    
-                    #7000 * 0.3142857 / 10
-                    
-                    if qty > self.maxqty:
-                        self.maxqty = qty
-                    #print('maxqty: ' + str(self.maxqty))
-                    #print('qty: ' + str(qty))
-                    qty = int(qty)
-                    MAX_SKEW = qty * 1.5
-                    self.PCT_LIM_SHORT  = self.maxqty * 25
-                    self.PCT_LIM_LONG  = self.maxqty * 25
-                    
-                    if qty + skew_size >  MAX_SKEW:
-                        #print('bid max_skew return ...')
-                        try:
-                            for xyz in bid_ords:
-                                cancel_oids.append( xyz['orderId'] )
-
-                            self.execute_cancels(ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
-                        except:    
-                            return
-                    if i < len_bid_ords:    
-
-                        oid = bid_ords[ i ][ 'orderId' ]
-                        try:
-                                self.client.edit( oid, qty, prc )
-
-                        except (SystemExit, KeyboardInterrupt):
-                            raise
-                        except: 
-                            try:
-                                if self.arbmult[token][ex]['long'] == ex or self.arbmult[token][ex]['short'] != ex :
-                                    if ex == 'deribit':
-                                        self.client.buy( fut, qty, prc, 'true' )
-
-                                cancel_oids.append( oid )
-                                self.logger.warn( 'Edit failed for %s' % oid )
-                            except (SystemExit, KeyboardInterrupt):
-                                raise
-                            except Exception as e:
-                                print(e)
-                                self.logger.warn( 'Bid order failed: %s: %s bid for %s'
-                                                % ( fut, prc, qty ))
-                    else:
-                        try:
-                            if self.arbmult[token][ex]['long'] == ex or self.arbmult[token][ex]['short'] != ex :
-                                if ex == 'deribit':
-                                    self.client.buy( fut, qty, prc, 'true' )
-                        except (SystemExit, KeyboardInterrupt):
-                            raise
-                        except Exception as e:
-                            print(e)
-                            self.logger.warn( 'Bid order failed: %s: %s bid for %s'
-                                                % ( fut, prc, qty ))
-
-                self.execute_cancels(ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
-             
-            if ex == 'bybit':
-                try:
-                    fut2 =  fut.split('-')
-                    if 'USD' in fut2[0]:
-                        fut = fut2[0]
-                    else:
-                        fut = fut2[1]
-                except:
-                    abc = 123
-                if place_bids and i < nbids:
-
-                    if i > 0:
-                        prc = ticksize_floor( min( bids[ i ], bids[ i - 1 ] - tsz ), tsz )
-                    else:
-                        prc = bids[ 0 ]
-                    qty = round ( float(prc) * qtybtc ) 
-                    if qty > self.maxqty:
-                        self.maxqty = qty
-                    #print('maxqty: ' + str(self.maxqty))
-                    #print('qty: ' + str(qty))
-                    qty = int(qty)
-                    MAX_SKEW = qty * 1.5
-                    self.PCT_LIM_SHORT  = self.maxqty * 25
-                    self.PCT_LIM_LONG  = self.maxqty * 25
-                    if ex in self.arbmult[token]:
-                        if self.arbmult[token][ex]['short'] == ex or self.arbmult[token][ex]['long'] != ex :
-                            MAX_SKEW = MAX_SKEW * 2
-                                                 
-                    
-                    if qty + skew_size >  MAX_SKEW:
-                        #print('bid max_skew return ...')
-                        try:
-                            for xyz in bid_ords:
-                                cancel_oids.append( xyz['order_id'] )
-
-                            self.execute_cancels(ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
-                        except:
-                            return
-                    if i < len_bid_ords:    
-
-                        oid = bid_ords[ i ][ 'order_id' ]
-                        try:
-                                self.bit.Order.Order_replace(order_id=oid, symbol=fut).result()
-                        except (SystemExit, KeyboardInterrupt):
-                            raise
-                        except:
-                            try:
-                                if self.arbmult[token][ex]['long'] == ex or self.arbmult[token][ex]['short'] != ex :
-                                    self.bit.Order.Order_new(side="Buy",symbol=fut,order_type="Limit",qty=qty,price=prc,time_in_force="PostOnly").result()
-
-
-                                cancel_oids.append( oid )
-                                self.logger.warn( 'Edit failed for %s' % oid )
-                            except (SystemExit, KeyboardInterrupt):
-                                raise
-                            except Exception as e:
-                                print(e)
-                                self.logger.warn( 'Bid order failed: %s: %s bid for %s'
-                                                % ( fut, prc, qty ))
-                    else:
-                        try:
-                            if self.arbmult[token][ex]['long'] == ex or self.arbmult[token][ex]['short'] != ex :
-                                self.bit.Order.Order_new(side="Buy",symbol=fut,order_type="Limit",qty=qty,price=prc,time_in_force="PostOnly").result()
-
-                        except (SystemExit, KeyboardInterrupt):
-                            raise
-                        except Exception as e:
-                            print(e)
-                            self.logger.warn( 'Bid order failed: %s: %s bid for %s'
-                                                % ( fut, prc, qty ))
-
-                self.execute_cancels(ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
-            if ex == 'bitmex':
-            
-                if place_bids and i < nbids:
-
-                    prc = self.get_bbo(fut, ex)['bid']
-
-                    qty = round ( float(prc) * qtybtc ) 
-                    if qty > self.maxqty:
-                        self.maxqty = qty
-                    #print('maxqty: ' + str(self.maxqty))
-                    #print('qty: ' + str(qty))
-                    MAX_SKEW = qty * 1.5
-                    qty = int(qty)
-                    self.PCT_LIM_SHORT  = self.maxqty * 25
-                    self.PCT_LIM_LONG  = self.maxqty * 25
-                                                 
-                    
-                    if qty + skew_size >  MAX_SKEW:
-                        #print('bid max_skew return ...')
-                        try:
-                            for xyz in bid_ords:
-                                cancel_oids.append( xyz['orderID'] )
-
-                            self.execute_cancels(ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
-                        except:
-                            return
-                    if i < len_bid_ords:    
-
-                        oid = bid_ords[ i ][ 'orderID' ]
-                        try:
-                                self.bit.Order.Order_amend(orderID=oid, price=prc).result()
-                        except (SystemExit, KeyboardInterrupt):
-                            raise
-                        except:
-                            try:
-                                if self.arbmult[token][ex]['long'] == ex or self.arbmult[token][ex]['short'] != ex :
-                                    self.bit.Order.Order_new(symbol=fut, orderQty=qty, price=prc,execInst="ParticipateDoNotInitiate").result()
-
-                                cancel_oids.append( oid )
-                                self.logger.warn( 'Edit failed for %s' % oid )
-                            except (SystemExit, KeyboardInterrupt):
-                                raise
-                            except Exception as e:
-                                print(e)
-                                self.logger.warn( 'Bid order failed: %s: %s bid for %s'
-                                                % ( fut, prc, qty ))
-                    else:
-                        try:
-                            if self.arbmult[token][ex]['long'] == ex or self.arbmult[token][ex]['short'] != ex :
-                                if ex == 'deribit':
-                                    self.bit.Order.Order_new(symbol=fut, orderQty=qty, price=prc,execInst="ParticipateDoNotInitiate").result()
-                        except (SystemExit, KeyboardInterrupt):
-                            raise
-                        except Exception as e:
-                            print(e)
-                            self.logger.warn( 'Bid order failed: %s: %s bid for %s'
-                                                % ( fut, prc, qty ))
-
-                self.execute_cancels(ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
-                        
-    def execute_offers ( self, ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords ):
-        token = 'BTC'
-        if 'ETH' in fut:
-            token = 'BTC'
-        
-        #print(' ')
-        #print(ex + ': ' + fut + ' landed in bids!')
-        #print(' ')
-        for i in range( max( nbids, nasks )):
-       
-
-            # OFFERS
-            if ex == 'deribit':
-                if place_asks and i < nasks:
-
-                    if i > 0:
-                        prc = ticksize_ceil( max( asks[ i ], asks[ i - 1 ] + tsz ), tsz )
-                    else:
-                        prc = asks[ 0 ]
-                        
-                    qty = round ( float(prc) * qtybtc )
-                    if 'BTC' in fut:
-                        qty = qty / 10
-                    if qty > self.maxqty:
-                        self.maxqty = qtyv
-                    #print('maxqty: ' + str(self.maxqty))
-                    
-                    #print('qty: ' + str(qty))
-                    MAX_SKEW = qty * 1.5
-                    qty = int(qty)
-                    self.PCT_LIM_SHORT  = self.maxqty * 25
-                    self.PCT_LIM_LONG  = self.maxqty * 25
-                    if self.arbmult[token][ex]['short'] == ex or self.arbmult[token][ex]['long'] != ex :
-                        MAX_SKEW = MAX_SKEW * 2
-                        
-
-                    
-                       
-                    #print('skew_size: ' + str(skew_size))
-                    #print('max_soew: ' + str(MAX_SKEW))
-                    if qty + skew_size * -1 >  MAX_SKEW:
-                        #print('offer max_skew return ...')
-                        try:
-                            for xyz in ask_ords:
-                                cancel_oids.append( xyz['orderId'] )
-
-                                
-                            self.execute_cancels(ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
-                        except:
-                            return
-                    if i < len_ask_ords:
-                        oid = ask_ords[ i ][ 'orderId' ]
-                        try:
-                            self.client.edit( oid, qty, prc )
-                        except (SystemExit, KeyboardInterrupt):
-                            raise
-                        except:
-                            try:
-                                if self.arbmult[token][ex]['short'] == ex or self.arbmult[token][ex]['long'] != ex :
-                                    if ex == 'deribit':
-                                        self.client.sell( fut, qty, prc, 'true' )
-                                    
-
-                                cancel_oids.append( oid )
-                                self.logger.warn( 'Sell Edit failed for %s' % oid )
-                            except (SystemExit, KeyboardInterrupt):
-                                raise
-                            except Exception as e:
-                                print(e)
-                                self.logger.warn( 'Offer order failed: %s: %s at %s'
-                                                % ( fut, qty, prc ))
-
-                    else:
-                        try:
-                            if self.arbmult[token][ex]['short'] == ex or self.arbmult[token][ex]['long'] != ex :
-                                if ex == 'deribit':
-                                    self.client.sell( fut, qty, prc, 'true' )
-
-                        except (SystemExit, KeyboardInterrupt):
-                            raise
-                        except Exception as e:
-                            print(e)
-                            self.logger.warn( 'Offer order failed: %s: %s at %s'
-                                                % ( fut, qty, prc ))
-                self.execute_cancels(ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
-    
-            if ex == 'bybit':
-                try:
-                    fut2 =  fut.split('-')
-                    if 'USD' in fut2[0]:
-                        fut = fut2[0]
-                    else:
-                        fut = fut2[1]
-                except:
-                    abc = 123
-                if place_asks and i < nasks:
-
-                    if i > 0:
-                        prc = ticksize_ceil( max( asks[ i ], asks[ i - 1 ] + tsz ), tsz )
-                    else:
-                        prc = asks[ 0 ]
-                        
-                    qty = round ( float(prc) * qtybtc )  
-                    if qty > self.maxqty:
-                        self.maxqty = qty
-                    #print('maxqty: ' + str(self.maxqty))
-                    
-                    #print('qty: ' + str(qty))
-                    MAX_SKEW = qty * 1.5
-                    qty = int(qty)
-                    self.PCT_LIM_SHORT  = self.maxqty * 25
-                    self.PCT_LIM_LONG  = self.maxqty * 25
-                    
-
-                    
-                       
-                    #print('skew_size: ' + str(skew_size))
-                    #print('max_soew: ' + str(MAX_SKEW))
-                    if qty + skew_size * -1 >  MAX_SKEW:
-                        #print('offer max_skew return ...')
-                        try:
-                            for xyz in ask_ords:
-                                cancel_oids.append( xyz['orderID'] )
-
-                                
-                            self.execute_cancels(ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
-                        except:
-                            return
-                    if i < len_ask_ords:
-                        oid = ask_ords[ i ][ 'orderID' ]
-                        try:
-                            self.bit.Order.Order_replace(order_id=oid, symbol=fut).result()
-                        except (SystemExit, KeyboardInterrupt):
-                            raise
-                        except:
-                            try:
-                                if self.arbmult[token][ex]['short'] == ex or self.arbmult[token][ex]['long'] != ex :
-                                    self.bit.Order.Order_new(side="Sell",symbol=fut,order_type="Limit",qty=qty,price=prc,time_in_force="PostOnly").result()
-                                    
-
-                                cancel_oids.append( oid )
-                                self.logger.warn( 'Sell Edit failed for %s' % oid )
-                            except (SystemExit, KeyboardInterrupt):
-                                raise
-                            except Exception as e:
-                                print(e)
-                                self.logger.warn( 'Offer order failed: %s: %s at %s'
-                                                % ( fut, qty, prc ))
-
-                    else:
-                        try:
-                            if self.arbmult[token][ex]['short'] == ex or self.arbmult[token][ex]['long'] != ex :
-                                self.bit.Order.Order_new(side="Sell",symbol=fut,order_type="Limit",qty=qty,price=prc,time_in_force="PostOnly").result()
-
-                        except (SystemExit, KeyboardInterrupt):
-                            raise
-                        except Exception as e:
-                            print(e)
-                            self.logger.warn( 'Offer order failed: %s: %s at %s'
-                                                % ( fut, qty, prc ))
-                self.execute_cancels(ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
-    
-            if ex == 'bitmex':
-                if place_asks and i < nasks:
-
-
-                    prc = self.get_bbo(fut, ex)['ask']    
-                    qty = round ( float(prc) * qtybtc )  
-                    if qty > self.maxqty:
-                        self.maxqty = qty
-                    #print('maxqty: ' + str(self.maxqty))
-                    
-                    #print('qty: ' + str(qty))
-
-                    MAX_SKEW = qty * 1.5
-                    
-                    qty = int(qty)
-                    qty = qty * -1 #mex
-                    self.PCT_LIM_SHORT  = self.maxqty * 25
-                    self.PCT_LIM_LONG  = self.maxqty * 25
-
-                    
-                       
-                    #print('skew_size: ' + str(skew_size))
-                    #print('max_soew: ' + str(MAX_SKEW))
-                    if qty * -1 + skew_size * -1 >  MAX_SKEW:
-                        
-                        #print('offer max_skew return ...')
-                        try:
-                            for xyz in ask_ords:
-                                cancel_oids.append( xyz['orderID'] )
-
-                                
-                            self.execute_cancels(ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
-                        except:
-                            return
-                    if i < len_ask_ords:
-                        oid = ask_ords[ i ][ 'orderID' ]
-                        try:
-                            self.mex.Order.Order_amend(orderID=oid, price=prc).result()
-                        except (SystemExit, KeyboardInterrupt):
-                            raise
-                        except:
-                            try:
-                                if self.arbmult[token][ex]['short'] == ex or self.arbmult[token][ex]['long'] != ex :
-                                    self.mex.Order.Order_new(symbol=fut, orderQty=qty, price=prc,execInst="ParticipateDoNotInitiate").result()
-                                    
-
-                                cancel_oids.append( oid )
-                                self.logger.warn( 'Sell Edit failed for %s' % oid )
-                            except (SystemExit, KeyboardInterrupt):
-                                raise
-                            except Exception as e:
-                                print(e)
-                                self.logger.warn( 'Offer order failed: %s: %s at %s'
-                                                % ( fut, qty, prc ))
-
-                    else:
-                        try:
-                            if self.arbmult[token][ex]['short'] == ex or self.arbmult[token][ex]['long'] != ex :
-                                self.mex.Order.Order_new(symbol=fut, orderQty=qty, price=prc,execInst="ParticipateDoNotInitiate").result()
-
-                        except (SystemExit, KeyboardInterrupt):
-                            raise
-                        except Exception as e:
-                            print(e)
-                            self.logger.warn( 'Offer order failed: %s: %s at %s'
-                                                % ( fut, qty, prc ))
-                self.execute_cancels(ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
-    
-    
-    
     def execute_cancels(self, ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords):
         if fut == 'deribit':
             if nbids < len( bid_ords ):
