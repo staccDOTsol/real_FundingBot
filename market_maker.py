@@ -471,9 +471,6 @@ class MarketMaker( object ):
         #print('qtybtc: ' + str(qtybtc))
         #print('qty $: ' + str(qtybtc * spot))
         #print('divided: ' + str(pos_lim_short / qtybtc))
-        place_bids = nbids > 0
-        
-        place_asks = nasks > 0  
         print('place_x2L ' + ex + '-' + fut)
         print(place_bids)
         print(place_asks)
@@ -547,8 +544,6 @@ class MarketMaker( object ):
         #print(fut)
         #print(fut)
 
-        place_bids = len(bids) > 0
-        place_asks = len(asks) > 0
         #print(place_asks)
         if ex == 'bybit' and 'ETH' in fut:
             fut =  fut.split('-')[0]
