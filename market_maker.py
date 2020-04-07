@@ -1445,9 +1445,9 @@ class MarketMaker( object ):
                                 'sizeBtc':         pos['homeNotional'],
                                 'averagePrice': pos['avgEntryPrice'],
                                 'floatingPl': pos['unrealisedPnlPcnt']}
-                    except:
-                        #print(pos)
-                        abc123 = 1
+                except:
+                    #print(pos)
+                    abc123 = 1
 if __name__ == '__main__':
     
     try:
