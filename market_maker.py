@@ -670,7 +670,7 @@ class MarketMaker( object ):
                             raise
                         except:
                             try:
-                                if arbmult[token][ex]['short'] != ex:
+                                if self.arbmult[token][ex]['short'] != ex:
                                     if ex == 'deribit':
                                         self.client.buy( fut, qty, prc, 'true' )
 
@@ -684,7 +684,7 @@ class MarketMaker( object ):
                                                 % ( fut, prc, qty ))
                     else:
                         try:
-                            if arbmult[token][ex]['short'] != ex:
+                            if self.arbmult[token][ex]['short'] != ex:
                                 if ex == 'deribit':
                                     self.client.buy( fut, qty, prc, 'true' )
                         except (SystemExit, KeyboardInterrupt):
@@ -740,7 +740,7 @@ class MarketMaker( object ):
                             raise
                         except:
                             try:
-                                if arbmult[token][ex]['short'] != ex:
+                                if self.arbmult[token][ex]['short'] != ex:
                                     self.bit.Order.Order_new(side="Buy",symbol=fut,order_type="Limit",qty=qty,price=prc,time_in_force="PostOnly").result()
 
 
@@ -754,7 +754,7 @@ class MarketMaker( object ):
                                                 % ( fut, prc, qty ))
                     else:
                         try:
-                            if arbmult[token][ex]['short'] != ex:
+                            if self.arbmult[token][ex]['short'] != ex:
                                 self.bit.Order.Order_new(side="Buy",symbol=fut,order_type="Limit",qty=qty,price=prc,time_in_force="PostOnly").result()
 
                         except (SystemExit, KeyboardInterrupt):
@@ -802,7 +802,7 @@ class MarketMaker( object ):
                             raise
                         except:
                             try:
-                                if arbmult[token][ex]['short'] != ex:
+                                if self.arbmult[token][ex]['short'] != ex:
                                     self.bit.Order.Order_new(symbol=fut, orderQty=qty, price=prc,execInst="ParticipateDoNotInitiate").result()
 
                                 cancel_oids.append( oid )
@@ -815,7 +815,7 @@ class MarketMaker( object ):
                                                 % ( fut, prc, qty ))
                     else:
                         try:
-                            if arbmult[token][ex]['short'] != ex:
+                            if self.arbmult[token][ex]['short'] != ex:
                                 if ex == 'deribit':
                                     self.bit.Order.Order_new(symbol=fut, orderQty=qty, price=prc,execInst="ParticipateDoNotInitiate").result()
                         except (SystemExit, KeyboardInterrupt):
@@ -883,7 +883,7 @@ class MarketMaker( object ):
                             raise
                         except:
                             try:
-                                if arbmult[token][ex]['long'] != ex:
+                                if self.arbmult[token][ex]['long'] != ex:
                                     if ex == 'deribit':
                                         self.client.sell( fut, qty, prc, 'true' )
                                     
@@ -899,7 +899,7 @@ class MarketMaker( object ):
 
                     else:
                         try:
-                            if arbmult[token][ex]['long'] != ex:
+                            if self.arbmult[token][ex]['long'] != ex:
                                 if ex == 'deribit':
                                     self.client.sell( fut, qty, prc, 'true' )
 
@@ -957,7 +957,7 @@ class MarketMaker( object ):
                             raise
                         except:
                             try:
-                                if arbmult[token][ex]['long'] != ex:
+                                if self.arbmult[token][ex]['long'] != ex:
                                     self.bit.Order.Order_new(side="Sell",symbol=fut,order_type="Limit",qty=qty,price=prc,time_in_force="PostOnly").result()
                                     
 
@@ -972,7 +972,7 @@ class MarketMaker( object ):
 
                     else:
                         try:
-                            if arbmult[token][ex]['long'] != ex:
+                            if self.arbmult[token][ex]['long'] != ex:
                                 self.bit.Order.Order_new(side="Sell",symbol=fut,order_type="Limit",qty=qty,price=prc,time_in_force="PostOnly").result()
 
                         except (SystemExit, KeyboardInterrupt):
@@ -1024,7 +1024,7 @@ class MarketMaker( object ):
                             raise
                         except:
                             try:
-                                if arbmult[token][ex]['long'] != ex:
+                                if self.arbmult[token][ex]['long'] != ex:
                                     self.mex.Order.Order_new(symbol=fut, orderQty=qty, price=prc,execInst="ParticipateDoNotInitiate").result()
                                     
 
