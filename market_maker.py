@@ -602,11 +602,7 @@ class MarketMaker( object ):
         #print(place_asks)
         if ex == 'bybit' and 'ETH' in fut:
             fut =  fut.split('-')[0]
-        if place_bids:
-            self.execute_bids (ex, fut, psize, skew_size, nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords )    
-        if place_asks:
-            self.execute_offers (ex, fut, psize, skew_size, nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)    
-            
+        self.execute_arb (ex, fut, psize, skew_size, nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords )    
 
 
     def execute_arb ( self, ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords):
@@ -661,7 +657,7 @@ class MarketMaker( object ):
                 abc = 123
             
             # Long
-            if self.arbmult[token][ex]['long'] == ex: # Ok! You win! You can long!
+            if self.arbmult[token][ex]['long'] == ex and place_bids: # Ok! You win! You can long!
                 if qty + skew_size >  MAX_SKEW:
                     print('max skew, returning')
                     return
@@ -712,7 +708,7 @@ class MarketMaker( object ):
 
                 self.execute_cancels(ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
             # Short
-            if self.arbmult[token][ex]['short'] == ex: # Ok! You win! You can short!
+            if self.arbmult[token][ex]['short'] == ex and place_asks: # Ok! You win! You can short!
             
                 if qty + skew_size * -1 >  MAX_SKEW:
                     print('offer max_skew return ...')
