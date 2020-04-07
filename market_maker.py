@@ -106,12 +106,12 @@ class MarketMaker( object ):
 
         self.percs = {}
         self.maxqty = 25
-        self.PCT_LIM_LONG        = self.maxqty * 15       # % position limit long
+        self.PCT_LIM_LONG        = self.maxqty * 25       # % position limit long
 
-        self.PCT_LIM_SHORT       = self.maxqty * 15      # % position limit short
-        self.PCT_LIM_LONG_OLD        = self.maxqty * 15       # % position limit long
+        self.PCT_LIM_SHORT       = self.maxqty * 25      # % position limit short
+        self.PCT_LIM_LONG_OLD        = self.maxqty * 25       # % position limit long
 
-        self.PCT_LIM_SHORT_OLD       = self.maxqty * 15      # % position limit short
+        self.PCT_LIM_SHORT_OLD       = self.maxqty * 25      # % position limit short
         self.PCT_LIM_LONG        *= PCT
         self.PCT_LIM_SHORT       *= PCT
         self.equity_usd         = None
@@ -640,8 +640,8 @@ class MarketMaker( object ):
                     #print('qty: ' + str(qty))
                     qty = int(qty)
                     MAX_SKEW = qty * 1.5
-                    self.PCT_LIM_SHORT  = self.maxqty * 15
-                    self.PCT_LIM_LONG  = self.maxqty * 15
+                    self.PCT_LIM_SHORT  = self.maxqty * 25
+                    self.PCT_LIM_LONG  = self.maxqty * 25
                     
                     if qty + skew_size >  MAX_SKEW:
                         #print('bid max_skew return ...')
@@ -710,8 +710,8 @@ class MarketMaker( object ):
                     #print('qty: ' + str(qty))
                     qty = int(qty)
                     MAX_SKEW = qty * 1.5
-                    self.PCT_LIM_SHORT  = self.maxqty * 15
-                    self.PCT_LIM_LONG  = self.maxqty * 15
+                    self.PCT_LIM_SHORT  = self.maxqty * 25
+                    self.PCT_LIM_LONG  = self.maxqty * 25
                     if ex in self.arbmult[token]:
                         if self.arbmult[token][ex]['short'] == ex or self.arbmult[token][ex]['long'] != ex :
                             MAX_SKEW = MAX_SKEW * 2
@@ -773,8 +773,8 @@ class MarketMaker( object ):
                     #print('qty: ' + str(qty))
                     MAX_SKEW = qty * 1.5
                     qty = int(qty)
-                    self.PCT_LIM_SHORT  = self.maxqty * 15
-                    self.PCT_LIM_LONG  = self.maxqty * 15
+                    self.PCT_LIM_SHORT  = self.maxqty * 25
+                    self.PCT_LIM_LONG  = self.maxqty * 25
                                                  
                     
                     if qty + skew_size >  MAX_SKEW:
@@ -850,8 +850,8 @@ class MarketMaker( object ):
                     #print('qty: ' + str(qty))
                     MAX_SKEW = qty * 1.5
                     qty = int(qty)
-                    self.PCT_LIM_SHORT  = self.maxqty * 15
-                    self.PCT_LIM_LONG  = self.maxqty * 15
+                    self.PCT_LIM_SHORT  = self.maxqty * 25
+                    self.PCT_LIM_LONG  = self.maxqty * 25
                     if self.arbmult[token][ex]['short'] == ex or self.arbmult[token][ex]['long'] != ex :
                         MAX_SKEW = MAX_SKEW * 2
                         
@@ -930,8 +930,8 @@ class MarketMaker( object ):
                     #print('qty: ' + str(qty))
                     MAX_SKEW = qty * 1.5
                     qty = int(qty)
-                    self.PCT_LIM_SHORT  = self.maxqty * 15
-                    self.PCT_LIM_LONG  = self.maxqty * 15
+                    self.PCT_LIM_SHORT  = self.maxqty * 25
+                    self.PCT_LIM_LONG  = self.maxqty * 25
                     
 
                     
@@ -998,8 +998,8 @@ class MarketMaker( object ):
                     
                     qty = int(qty)
                     qty = qty * -1 #mex
-                    self.PCT_LIM_SHORT  = self.maxqty * 15
-                    self.PCT_LIM_LONG  = self.maxqty * 15
+                    self.PCT_LIM_SHORT  = self.maxqty * 25
+                    self.PCT_LIM_LONG  = self.maxqty * 25
 
                     
                        
