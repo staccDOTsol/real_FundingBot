@@ -312,17 +312,21 @@ class MarketMaker( object ):
 
             err = 10 ** -( self.get_precision( contract ) + 1 )
             
-            best_bid = 9999999999999999999
+            best_bid = 99999999999999999
             for a in bids:
                 if a[0] < best_bid:
+                    bid_up = best_bid
                     best_bid = a[0]
             best_ask = 0
             for a in asks:
                 if a[0] > best_ask:
+                    ask_up = best_ask
                     best_ask = a[0]
             
+            best_ask = ask_up
+            best_bid = bid_up
+            
                    
-            print({ 'bid': best_bid, 'ask': best_ask })
         if exchange == 'bybit':
             
             if 'ETH' in contract:
@@ -674,12 +678,13 @@ class MarketMaker( object ):
                     
                     if qty + skew_size >  MAX_SKEW:
                         #print('bid max_skew return ...')
-                        for xyz in bid_ords:
-                            cancel_oids.append( xyz['orderId'] )
+                        try:
+                            for xyz in bid_ords:
+                                cancel_oids.append( xyz['orderId'] )
 
-                        self.execute_cancels(ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
-                            
-                        return
+                            self.execute_cancels(ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
+                        except:    
+                            return
                     if i < len_bid_ords:    
 
                         oid = bid_ords[ i ][ 'orderId' ]
@@ -747,12 +752,13 @@ class MarketMaker( object ):
                     
                     if qty + skew_size >  MAX_SKEW:
                         #print('bid max_skew return ...')
-                        for xyz in bid_ords:
-                            cancel_oids.append( xyz['order_id'] )
+                        try:
+                            for xyz in bid_ords:
+                                cancel_oids.append( xyz['order_id'] )
 
-                        self.execute_cancels(ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
-                            
-                        return
+                            self.execute_cancels(ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
+                        except:
+                            return
                     if i < len_bid_ords:    
 
                         oid = bid_ords[ i ][ 'order_id' ]
@@ -809,12 +815,13 @@ class MarketMaker( object ):
                     
                     if qty + skew_size >  MAX_SKEW:
                         #print('bid max_skew return ...')
-                        for xyz in bid_ords:
-                            cancel_oids.append( xyz['orderID'] )
+                        try:
+                            for xyz in bid_ords:
+                                cancel_oids.append( xyz['orderID'] )
 
-                        self.execute_cancels(ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
-                            
-                        return
+                            self.execute_cancels(ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
+                        except:
+                            return
                     if i < len_bid_ords:    
 
                         oid = bid_ords[ i ][ 'orderID' ]
@@ -891,12 +898,14 @@ class MarketMaker( object ):
                     #print('max_soew: ' + str(MAX_SKEW))
                     if qty + skew_size * -1 >  MAX_SKEW:
                         #print('offer max_skew return ...')
-                        for xyz in ask_ords:
-                            cancel_oids.append( xyz['orderId'] )
+                        try:
+                            for xyz in ask_ords:
+                                cancel_oids.append( xyz['orderId'] )
 
-                            
-                        self.execute_cancels(ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
-                        return
+                                
+                            self.execute_cancels(ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
+                        except:
+                            return
                     if i < len_ask_ords:
                         oid = ask_ords[ i ][ 'orderId' ]
                         try:
@@ -967,12 +976,14 @@ class MarketMaker( object ):
                     #print('max_soew: ' + str(MAX_SKEW))
                     if qty + skew_size * -1 >  MAX_SKEW:
                         #print('offer max_skew return ...')
-                        for xyz in ask_ords:
-                            cancel_oids.append( xyz['orderID'] )
+                        try:
+                            for xyz in ask_ords:
+                                cancel_oids.append( xyz['orderID'] )
 
-                            
-                        self.execute_cancels(ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
-                        return
+                                
+                            self.execute_cancels(ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
+                        except:
+                            return
                     if i < len_ask_ords:
                         oid = ask_ords[ i ][ 'orderID' ]
                         try:
@@ -1034,13 +1045,16 @@ class MarketMaker( object ):
                     #print('skew_size: ' + str(skew_size))
                     #print('max_soew: ' + str(MAX_SKEW))
                     if qty * -1 + skew_size * -1 >  MAX_SKEW:
+                        
                         #print('offer max_skew return ...')
-                        for xyz in ask_ords:
-                            cancel_oids.append( xyz['orderID'] )
+                        try:
+                            for xyz in ask_ords:
+                                cancel_oids.append( xyz['orderID'] )
 
-                            
-                        self.execute_cancels(ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
-                        return
+                                
+                            self.execute_cancels(ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
+                        except:
+                            return
                     if i < len_ask_ords:
                         oid = ask_ords[ i ][ 'orderID' ]
                         try:
