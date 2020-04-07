@@ -767,7 +767,7 @@ class MarketMaker( object ):
             
                 if place_bids and i < nbids:
 
-                    prc = self.get_bbo(fut, ex)['buy']
+                    prc = self.get_bbo(fut, ex)['bid']
 
                     qty = round ( float(prc) * qtybtc ) 
                     if qty > self.maxqty:
@@ -989,7 +989,7 @@ class MarketMaker( object ):
                 if place_asks and i < nasks:
 
 
-                    prc = self.get_bbo()['sell']    
+                    prc = self.get_bbo()['ask']    
                     qty = round ( float(prc) * qtybtc )  
                     if qty > self.maxqty:
                         self.maxqty = qty
