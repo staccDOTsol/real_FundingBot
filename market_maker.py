@@ -106,12 +106,12 @@ class MarketMaker( object ):
 
         self.percs = {}
         self.maxqty = 25
-        self.PCT_LIM_LONG        = self.maxqty * 25       # % position limit long
+        self.PCT_LIM_LONG        = self.maxqty * 15       # % position limit long
 
-        self.PCT_LIM_SHORT       = self.maxqty * 25      # % position limit short
-        self.PCT_LIM_LONG_OLD        = self.maxqty * 25       # % position limit long
+        self.PCT_LIM_SHORT       = self.maxqty * 15      # % position limit short
+        self.PCT_LIM_LONG_OLD        = self.maxqty * 15       # % position limit long
 
-        self.PCT_LIM_SHORT_OLD       = self.maxqty * 25      # % position limit short
+        self.PCT_LIM_SHORT_OLD       = self.maxqty * 15      # % position limit short
         self.PCT_LIM_LONG        *= PCT
         self.PCT_LIM_SHORT       *= PCT
         self.equity_usd         = None
@@ -461,13 +461,11 @@ class MarketMaker( object ):
                 fut2 = fut.split('-')[0]
                 psize = self.positions[fut2 + '-' + ex]['size']
                 spot            = self.get_spot(fut2 + '-' + ex)
-                bal_btc         = self.bals[ex]
                 pos             = self.positions[ fut2  + '-' + ex ][ 'sizeBtc' ]
 
             else:
                 psize = self.positions[fut]['size']
                 spot            = self.get_spot(fut)
-                bal_btc         = self.bals[ex]
                 pos             = self.positions[ fut  ][ 'sizeBtc' ]
 
             if psize < 0:
@@ -495,7 +493,6 @@ class MarketMaker( object ):
 
             if psize < 0:
                 psize = psize * -1
-            bal_btc         = self.bals[ex]
             pos             = self.positions[ fut ][ 'sizeBtc' ]
             #print(self.PCT_LIM_SHORT)
             pos_lim_long    = bal_btc * (self.PCT_LIM_LONG * 10) / spot
@@ -527,9 +524,9 @@ class MarketMaker( object ):
         place_bids = nbids > 0
         
         place_asks = nasks > 0  
-        #print('place_x2L ' + ex + '-' + fut)
-        #print(place_bids)
-        #print(place_asks)
+        print('place_x2L ' + ex + '-' + fut)
+        print(place_bids)
+        print(place_asks)
 
     
         if not place_bids and not place_asks:
@@ -643,8 +640,8 @@ class MarketMaker( object ):
                     #print('qty: ' + str(qty))
                     qty = int(qty)
                     MAX_SKEW = qty * 1.5
-                    self.PCT_LIM_SHORT  = self.maxqty * 25
-                    self.PCT_LIM_LONG  = self.maxqty * 25
+                    self.PCT_LIM_SHORT  = self.maxqty * 15
+                    self.PCT_LIM_LONG  = self.maxqty * 15
                     
                     if qty + skew_size >  MAX_SKEW:
                         #print('bid max_skew return ...')
@@ -713,8 +710,8 @@ class MarketMaker( object ):
                     #print('qty: ' + str(qty))
                     qty = int(qty)
                     MAX_SKEW = qty * 1.5
-                    self.PCT_LIM_SHORT  = self.maxqty * 25
-                    self.PCT_LIM_LONG  = self.maxqty * 25
+                    self.PCT_LIM_SHORT  = self.maxqty * 15
+                    self.PCT_LIM_LONG  = self.maxqty * 15
                     if ex in self.arbmult[token]:
                         if self.arbmult[token][ex]['short'] == ex or self.arbmult[token][ex]['long'] != ex :
                             MAX_SKEW = MAX_SKEW * 2
@@ -776,8 +773,8 @@ class MarketMaker( object ):
                     #print('qty: ' + str(qty))
                     MAX_SKEW = qty * 1.5
                     qty = int(qty)
-                    self.PCT_LIM_SHORT  = self.maxqty * 25
-                    self.PCT_LIM_LONG  = self.maxqty * 25
+                    self.PCT_LIM_SHORT  = self.maxqty * 15
+                    self.PCT_LIM_LONG  = self.maxqty * 15
                                                  
                     
                     if qty + skew_size >  MAX_SKEW:
@@ -853,8 +850,8 @@ class MarketMaker( object ):
                     #print('qty: ' + str(qty))
                     MAX_SKEW = qty * 1.5
                     qty = int(qty)
-                    self.PCT_LIM_SHORT  = self.maxqty * 25
-                    self.PCT_LIM_LONG  = self.maxqty * 25
+                    self.PCT_LIM_SHORT  = self.maxqty * 15
+                    self.PCT_LIM_LONG  = self.maxqty * 15
                     if self.arbmult[token][ex]['short'] == ex or self.arbmult[token][ex]['long'] != ex :
                         MAX_SKEW = MAX_SKEW * 2
                         
@@ -933,8 +930,8 @@ class MarketMaker( object ):
                     #print('qty: ' + str(qty))
                     MAX_SKEW = qty * 1.5
                     qty = int(qty)
-                    self.PCT_LIM_SHORT  = self.maxqty * 25
-                    self.PCT_LIM_LONG  = self.maxqty * 25
+                    self.PCT_LIM_SHORT  = self.maxqty * 15
+                    self.PCT_LIM_LONG  = self.maxqty * 15
                     
 
                     
@@ -989,7 +986,7 @@ class MarketMaker( object ):
                 if place_asks and i < nasks:
 
 
-                    prc = self.get_bbo()['ask']    
+                    prc = self.get_bbo(fut, ex)['ask']    
                     qty = round ( float(prc) * qtybtc )  
                     if qty > self.maxqty:
                         self.maxqty = qty
@@ -1001,8 +998,8 @@ class MarketMaker( object ):
                     
                     qty = int(qty)
                     qty = qty * -1 #mex
-                    self.PCT_LIM_SHORT  = self.maxqty * 25
-                    self.PCT_LIM_LONG  = self.maxqty * 25
+                    self.PCT_LIM_SHORT  = self.maxqty * 15
+                    self.PCT_LIM_LONG  = self.maxqty * 15
 
                     
                        
