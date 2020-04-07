@@ -128,7 +128,7 @@ class MarketMaker( object ):
         self.startTime = int(time.time()*1000)
         self.arbmult = {}
         self.arbmult['BTC'] = {}
-        self.arbmult[token] = {}
+        self.arbmult['ETH'] = {}
         self.totrade = ['bybit','bitmex', 'deribit']
         self.deltas             = OrderedDict()
         self.futures            = {}
