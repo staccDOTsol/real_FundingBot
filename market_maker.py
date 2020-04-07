@@ -119,20 +119,23 @@ class MarketMaker( object ):
 
         self.percs = {}
         self.maxqty = 25
-        self.PCT_LIM_LONG        = 0.33       # % position limit long
+        self.PCT_LIM_LONG        = 16.7       # % position limit long
+        self.LEV_LIM_LONG = 1.5
+        self.LEV_LIM_SHORT = 1.5
+        self.LEV_LIM_SHORT_OLD = 1.5
+        self.LEV_LIM_LONG_OLD = 1.5
+        self.PCT_LIM_SHORT       = 16.7     # % position limit short
+        self.PCT_LIM_LONG_OLD        = 16.7       # % position limit long
 
-        self.PCT_LIM_SHORT       = 0.33      # % position limit short
-        self.PCT_LIM_LONG_OLD        = 0.33       # % position limit long
-
-        self.PCT_LIM_SHORT_OLD       = 0.33      # % position limit short
-        self.PCT_LIM_LONG        *= PCT
-        self.PCT_LIM_SHORT       *= PCT
+        self.PCT_LIM_SHORT_OLD       = 16.7
         self.equity_usd         = None
         self.equity_btc         = None
         self.equity_usd_init    = None
         self.equity_btc_init    = 0
         self.con_size           = float( CONTRACT_SIZE )
         self.client             = None
+        self.lev = 1
+        self.IM = 1
         self.ccxt = None
         self.ws = {}
         self.tradeids = []
@@ -412,8 +415,8 @@ class MarketMaker( object ):
         print('\nTotal absolute delta (IM exposure): $' + str(a))
         self.IM = (0.01 + ((a/self.equity_usd) *0.005))*100
         self.IM = round(self.IM * 1000)/1000
-        lev = a / self.equity_usd
-        print('Actual initial margin across all accounts: ' + str(self.IM) + '% and leverage is ' + str(round(lev * 1000)/1000) + 'x')
+        self.lev = a / self.equity_usd
+        print('Actual initial margin across all accounts: ' + str(self.IM) + '% and leverage is ' + str(round(self.lev * 1000)/1000) + 'x')
         print( '\nMean Loop Time: %s' % round( self.mean_looptime, 2 ))
             
         print( '' )
@@ -433,20 +436,31 @@ class MarketMaker( object ):
         MAX_SKEW = MAX_SKEW_OLD
         self.PCT_LIM_SHORT  = self.PCT_LIM_SHORT_OLD
         self.PCT_LIM_LONG  = self.PCT_LIM_LONG_OLD
+        self.LEV_LIM_SHORT  = self.LEV_LIM_SHORT_OLD
+        self.LEV_LIM_LONG  = self.LEV_LIM_LONG_OLD
 
         bal_btc         = self.bals['total']
         #print('yo place orders ' + ex + ': ' + fut)
-        if self.arbmult[token]['short'] == ex or self.arbmult[token]['long'] != ex :
+        if self.arbmult[token]['short'] == ex:
             MAX_SKEW = MAX_SKEW * 2
+            self.LEV_LIM_SHORT = self.LEV_LIM_SHORT * 2
             self.PCT_LIM_SHORT  = self.PCT_LIM_SHORT * 2
+        
+        if self.arbmult[token]['long'] == ex:  
+            MAX_SKEW = MAX_SKEW * 2     
+            self.LEV_LIM_LONG = self.LEV_LIM_LONG * 2
             self.PCT_LIM_LONG  = self.PCT_LIM_LONG * 2
             
         if ex == 'bybit' and 'BTC' in fut:
             fut = fut.split('-')[0] 
         if 'ETH' in fut:
             self.PCT_LIM_SHORT  = self.PCT_LIM_SHORT * self.percs['ETH']
+            self.LEV_LIM_LONG = self.LEV_LIM_LONG * self.percs['ETH']
+            self.LEV_LIM_SHORT = self.LEV_LIM_SHORT * self.percs['ETH']            
             self.PCT_LIM_LONG  = self.PCT_LIM_LONG * self.percs['ETH']
         else:
+            self.LEV_LIM_LONG = self.LEV_LIM_LONG * self.percs['BTC']
+            self.LEV_LIM_SHORT = self.LEV_LIM_SHORT * self.percs['BTC']
             self.PCT_LIM_SHORT  = self.PCT_LIM_SHORT * self.percs['BTC']
             self.PCT_LIM_LONG  = self.PCT_LIM_LONG * self.percs['BTC']
         spot            = self.get_spot(fut)
@@ -454,6 +468,8 @@ class MarketMaker( object ):
         #print('skew_size: ' + str(skew_size))
         nbids = 1
         nasks = 1
+        print('im: ' + self.IM + ' lim long: ' + self.PCT_LIM_LONG + ' lim short: ' + self.PCT_LIM_SHORT)
+        print('lev: ' + self.LEV + ' lim long: ' + self.LEV_LIM_LONG + ' lim short: ' + self.LEV_LIM_SHORT)
         if self.IM > self.PCT_LIM_LONG:
             place_bids = False
             nbids = 0
@@ -461,6 +477,12 @@ class MarketMaker( object ):
             place_asks = False
             nasks = 0
         
+        if self.lev > self.LEV_LIM_LONG:
+            place_bids = False
+            nbids = 0
+        if self.lev > self.LEV_LIM_SHORT:
+            place_asks = False
+            nasks = 0
         
         min_order_size_btc = MIN_ORDER_SIZE / spot
         # 18 / (7000) 0.02571428571428571428571428571429
