@@ -290,41 +290,11 @@ class MarketMaker( object ):
             
         if exchange == 'bitmex':
             
-            ob = self.ws[contract].market_depth()
+            t = self.ws[contract].get_ticker()
 
-            bids = []
-            asks = []
-            for o in ob:
-                if o['side'].lower() == 'sell':
-                    bids.append([o['price'], o['size']])
-                else:
-                    asks.append([o['price'], o['size']])
             
-            if contract == 'BTC/USD':
-                ords        = self.ws['XBTUSD'].open_orders('')
-            else: 
-                ords        = self.ws[contract].open_orders('')
-            #print(ords)
-            bid_ords    = [ o for o in ords if o [ 'side' ] == 'Buy'  ]
-            ask_ords    = [ o for o in ords if o [ 'side' ] == 'Sell' ]
-            best_bid    = None
-            best_ask    = None
-
-            err = 10 ** -( self.get_precision( contract ) + 1 )
-            
-            best_bid = 99999999999999999
-            for a in bids:
-                if a[0] < best_bid:
-                    bid_up = best_bid
-                    best_bid = a[0]
-            best_ask = 0
-            for a in asks:
-                if a[0] > best_ask:
-                    ask_up = best_ask
-                    best_ask = a[0]
-            
-            best_ask = ask_up
-            best_bid = bid_up
+            best_ask = t['sell']
+            best_bid = t['buy']
             
                    
         if exchange == 'bybit':
@@ -797,10 +767,7 @@ class MarketMaker( object ):
             
                 if place_bids and i < nbids:
 
-                    if i > 0:
-                        prc = ticksize_floor( min( bids[ i ], bids[ i - 1 ] - tsz ), tsz )
-                    else:
-                        prc = bids[ 0 ]
+                    prc = self.get_bbo()['buy']
 
                     qty = round ( float(prc) * qtybtc ) 
                     if qty > self.maxqty:
@@ -1021,11 +988,8 @@ class MarketMaker( object ):
             if ex == 'bitmex':
                 if place_asks and i < nasks:
 
-                    if i > 0:
-                        prc = ticksize_ceil( max( asks[ i ], asks[ i - 1 ] + tsz ), tsz )
-                    else:
-                        prc = asks[ 0 ]
-                        
+
+                    prc = self.get_bbo()['sell']    
                     qty = round ( float(prc) * qtybtc )  
                     if qty > self.maxqty:
                         self.maxqty = qty
