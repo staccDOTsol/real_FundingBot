@@ -87,8 +87,6 @@ MIN_ORDER_SIZE      = 24
 MAX_LAYERS          =  1        # max orders to layer the ob with on each side
 MKT_IMPACT          =  0.5      # base 1-sided spread between bid/offer
 PCT                 = 100 * BP  # one percentage point
-MAX_SKEW = 1
-MAX_SKEW_OLD = 1
 PCT_QTY_BASE        = 100       # pct order qty in bps as pct of acct on each order
 MIN_LOOP_TIME       =   0.2       # Minimum time between loops
 SECONDS_IN_DAY      = 3600 * 24
@@ -106,6 +104,9 @@ PCT_QTY_BASE        *= BP
 class MarketMaker( object ):
     
     def __init__( self, monitor = True, output = True ):
+        self.MAX_SKEW = MIN_ORDER_SIZE * 1.5
+        self.MAX_SKEW_OLD = MIN_ORDER_SIZE * 1.5
+
         self.bit  = bybit.bybit(test=False, api_key="wbNMbu0aTQ7SxqZe58", api_secret="wel8qs4aXR0ytJ3s4zS3AKgCcPUblCVKQFVB")
         #print(dir(bitmex))
         self.mex = bitmex.bitmex(test=False, api_key="hYWO6-TaiH-FC5kDGUTGP-hO", api_secret="Cz92m7jRam3JTWHQZwiIKWUcSl5jvexquXldAM79kWmRzqvW")
@@ -696,10 +697,10 @@ class MarketMaker( object ):
                 else:
                     fut = 'ETHUSD'
                 
-                print(str(qty) + ' short qty ' + str(skew_size) + ' skew size and ' + str(MAX_SKEW))
+                print(str(qty) + ' short qty ' + str(skew_size) + ' skew size and ' + str(self.MAX_SKEW))
                 if qty + skew_size < self.MAX_SKEW:
                     print('less maxskew mex')
-                    self.bit.Order.Order_new(symbol=fut, orderQty=qty, price=self.get_bbo(ex, fut)['bid'],execInst="ParticipateDoNotInitiate").result()
+                    self.mex.Order.Order_new(symbol=fut, orderQty=qty, price=self.get_bbo(ex, fut)['bid'],execInst="ParticipateDoNotInitiate").result()
                 for fut in self.futures['deribit']:
                     if token in fut and qty + skew_size * -1 <  self.MAX_SKEW:
                         print('tokenfut long! deribit ' + fut)
@@ -763,10 +764,10 @@ class MarketMaker( object ):
                     fut = 'XBTUSD'
                 else:
                     fut = 'ETHUSD'
-                print(str(qty) + ' qty long     ' + str(skew_size) + ' skew size and ' + str(MAX_SKEW))
+                print(str(qty) + ' qty long     ' + str(skew_size) + ' skew size and ' + str(self.MAX_SKEW))
                 if qty + skew_size * -1 <  self.MAX_SKEW:
                     print('short mex unskewed')
-                    self.bit.Order.Order_new(symbol=fut, orderQty=-1 * qty, price=self.get_bbo(ex, fut)['ask'],execInst="ParticipateDoNotInitiate").result()
+                    self.mex.Order.Order_new(symbol=fut, orderQty=-1 * qty, price=self.get_bbo(ex, fut)['ask'],execInst="ParticipateDoNotInitiate").result()
                 for fut in self.futures['deribit']:
                     if token in fut and qty + skew_size < self.MAX_SKEW:
                         print('tokenfut! ' + fut + ' deribit')
