@@ -194,7 +194,7 @@ class MarketMaker( object ):
             self.exchangeRates['ETH']['bitmex'] = res
 
         except Exception as e:
-            print(e)
+            abc = 123 # print(e)
         try:
             
             res = self.bit.Funding.Funding_predicted(symbol="BTCUSD").result()
@@ -206,7 +206,7 @@ class MarketMaker( object ):
 
             self.exchangeRates['ETH']['bybit'] = res
         except Exception as e:
-            print(e)
+            abc = 123 # print(e)
         print(self.exchangeRates)
         #print(self.exchangeRates)
     def calculate_eth_btc( self ):
@@ -229,16 +229,23 @@ class MarketMaker( object ):
         #0.0011
         #119068
     def update_balances( self ):
-        bal = self.mex.User.User_getWalletSummary().result()[0]
-        for b in bal:
-            if b['transactType'] == 'Total':
-                bal = float(b['marginBalance'] / 100000000)
-                break
-        #print(bal)
-        bal = bal
-        self.bals['bitmex'] = bal
-        bal = self.bit.Wallet.Wallet_getBalance(coin="BTC").result()[0]['result']['BTC']['equity']
-        self.bals['bybit'] = bal
+        try:
+            bal = self.mex.User.User_getWalletSummary().result()[0]
+        
+            for b in bal:
+                if b['transactType'] == 'Total':
+                    bal = float(b['marginBalance'] / 100000000)
+                    break
+            #print(bal)
+            bal = bal
+            self.bals['bitmex'] = bal
+        except:
+            abc=123
+        try:
+            bal = self.bit.Wallet.Wallet_getBalance(coin="BTC").result()[0]['result']['BTC']['equity']
+            self.bals['bybit'] = bal
+        except:
+            abc=123
         bal = self.client.account()['equity']
         self.bals['deribit-btc'] = bal
         account         = self.ccxt.fetchBalance({'currency': 'ETH'})
@@ -269,10 +276,17 @@ class MarketMaker( object ):
             ob      = self.client.getorderbook( contract )
             bids    = ob[ 'bids' ]
             asks    = ob[ 'asks' ]
-            
-            best_bid    = bids[0]['price']
-            best_ask    = asks[0]['price']
-            
+            if 'ETH' in contract:
+                best_bid = self.get_spot('ETH')
+                best_ask = best_bid
+            else:
+                best_bid = self.get_spot('BTC')
+                best_ask = best_bid
+            try:
+                best_bid    = bids[0]['price']
+                best_ask    = asks[0]['price']
+            except:
+                abc=123
             
         if exchange == 'bitmex':
             
@@ -312,13 +326,19 @@ class MarketMaker( object ):
         if exchange == 'bybit':
             
             if 'ETH' in contract:
+                best_bid = self.get_spot('ETH')
+                best_ask = best_bid
                 result = self.bit.Market.Market_symbolInfo(symbol="ETHUSD").result()
             else:
+                best_bid = self.get_spot('BTC')
+                best_ask = best_bid
                 result = self.bit.Market.Market_symbolInfo(symbol="BTCUSD").result()
             #print(result)
-            best_bid    = result[0]['result'][0]['bid_price']
-            best_ask    = result[0]['result'][0]['ask_price']
-        
+            try:
+                best_bid    = result[0]['result'][0]['bid_price']
+                best_ask    = result[0]['result'][0]['ask_price']
+            except: 
+                abc = 123
         return { 'bid': best_bid, 'ask': best_ask }
     
         
@@ -416,7 +436,7 @@ class MarketMaker( object ):
                 self.PCT_LIM_LONG  = self.PCT_LIM_LONG * 2
                 
         if ex == 'bybit' and 'BTC' in fut:
-            fut = fut.split('-')[0]
+            fut = fut.split('-')[0] 
         if 'ETH' in fut:
             self.PCT_LIM_SHORT  = self.PCT_LIM_SHORT * self.percs['ETH']
             self.PCT_LIM_LONG  = self.PCT_LIM_LONG * self.percs['ETH']
@@ -645,7 +665,7 @@ class MarketMaker( object ):
                     
                     if qty > self.maxqty:
                         self.maxqty = qty
-                    print('maxqty: ' + str(self.maxqty))
+                    #print('maxqty: ' + str(self.maxqty))
                     #print('qty: ' + str(qty))
                     qty = int(qty)
                     MAX_SKEW = qty * 1.5
@@ -697,12 +717,14 @@ class MarketMaker( object ):
                 self.execute_cancels(ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
              
             if ex == 'bybit':
-                fut2 =  fut.split('-')
-                if 'USD' in fut2[0]:
-                    fut = fut2[0]
-                else:
-                    fut = fut2[1]
-                
+                try:
+                    fut2 =  fut.split('-')
+                    if 'USD' in fut2[0]:
+                        fut = fut2[0]
+                    else:
+                        fut = fut2[1]
+                except:
+                    abc = 123
                 if place_bids and i < nbids:
 
                     if i > 0:
@@ -712,7 +734,7 @@ class MarketMaker( object ):
                     qty = round ( float(prc) * qtybtc ) 
                     if qty > self.maxqty:
                         self.maxqty = qty
-                    print('maxqty: ' + str(self.maxqty))
+                    #print('maxqty: ' + str(self.maxqty))
                     #print('qty: ' + str(qty))
                     qty = int(qty)
                     MAX_SKEW = qty * 1.5
@@ -777,7 +799,7 @@ class MarketMaker( object ):
                     qty = round ( float(prc) * qtybtc ) 
                     if qty > self.maxqty:
                         self.maxqty = qty
-                    print('maxqty: ' + str(self.maxqty))
+                    #print('maxqty: ' + str(self.maxqty))
                     #print('qty: ' + str(qty))
                     MAX_SKEW = qty * 1.5
                     qty = int(qty)
@@ -852,7 +874,7 @@ class MarketMaker( object ):
                         qty = qty / 10
                     if qty > self.maxqty:
                         self.maxqty = qtyv
-                    print('maxqty: ' + str(self.maxqty))
+                    #print('maxqty: ' + str(self.maxqty))
                     
                     #print('qty: ' + str(qty))
                     MAX_SKEW = qty * 1.5
@@ -912,12 +934,14 @@ class MarketMaker( object ):
                 self.execute_cancels(ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
     
             if ex == 'bybit':
-                fut2 =  fut.split('-')
-                if 'USD' in fut2[0]:
-                    fut = fut2[0]
-                else:
-                    fut = fut2[1]
-   
+                try:
+                    fut2 =  fut.split('-')
+                    if 'USD' in fut2[0]:
+                        fut = fut2[0]
+                    else:
+                        fut = fut2[1]
+                except:
+                    abc = 123
                 if place_asks and i < nasks:
 
                     if i > 0:
@@ -928,7 +952,7 @@ class MarketMaker( object ):
                     qty = round ( float(prc) * qtybtc )  
                     if qty > self.maxqty:
                         self.maxqty = qty
-                    print('maxqty: ' + str(self.maxqty))
+                    #print('maxqty: ' + str(self.maxqty))
                     
                     #print('qty: ' + str(qty))
                     MAX_SKEW = qty * 1.5
@@ -994,7 +1018,7 @@ class MarketMaker( object ):
                     qty = round ( float(prc) * qtybtc )  
                     if qty > self.maxqty:
                         self.maxqty = qty
-                    print('maxqty: ' + str(self.maxqty))
+                    #print('maxqty: ' + str(self.maxqty))
                     
                     #print('qty: ' + str(qty))
 
@@ -1064,16 +1088,20 @@ class MarketMaker( object ):
                 except:
                     self.logger.warn( 'Order cancellations failed: %s' % oid )
         if fut == 'bybit':
-            fut =  fut.split('-')
-            if 'USD' in fut[0]:
-                fut = fut[0]
-            else:
-                fut = fut[1]
-            fut =  fut.split(' ')
-            if 'USD' in fut[0]:
-                fut = fut[0]
-            else:
-                fut = fut[1]
+            try:
+                fut =  fut.split('-')
+                
+                if 'USD' in fut[0]:
+                    fut = fut[0]
+                else:
+                    fut = fut[1]
+                fut =  fut.split(' ')
+                if 'USD' in fut[0]:
+                    fut = fut[0]
+                else:
+                    fut = fut[1]
+            except:
+                abc = 123
             if nbids < len( bid_ords ):
                 cancel_oids += [ o[ 'orderID' ] for o in bid_ords[ nbids : ]]
             if nasks < len( ask_ords ):
@@ -1382,38 +1410,42 @@ class MarketMaker( object ):
                         pos['size'] = pos['size']
                         self.positions[ pos[ 'instrument' ]] = pos
             if ex == 'bybit':
-                positions = self.bit.Positions.Positions_myPosition().result()[0]['result']
-                for pos in positions:
-                    if pos[ 'symbol' ] in self.futures['bybit']:
-                        if 'ETH' in pos[ 'symbol' ]:
-                             pos[ 'symbol' ] = "ETHUSD-bybit"
-                        size = pos['size']
-                        home = pos['position_value']
-                        if pos['side'] ==  'Sell':
-                            size = size * - 1
-                            home = home * -1
-                        self.positions[pos['symbol']] = {
-                            'size':         size,
-                            'sizeBtc':      home,
-                            'averagePrice': pos['entry_price'],
-                            'floatingPl': pos['unrealised_pnl']}
+                try:
+                    positions = self.bit.Positions.Positions_myPosition().result()[0]['result']
+                    for pos in positions:
+                        if pos[ 'symbol' ] in self.futures['bybit']:
+                            if 'ETH' in pos[ 'symbol' ]:
+                                 pos[ 'symbol' ] = "ETHUSD-bybit"
+                            size = pos['size']
+                            home = pos['position_value']
+                            if pos['side'] ==  'Sell':
+                                size = size * - 1
+                                home = home * -1
+                            self.positions[pos['symbol']] = {
+                                'size':         size,
+                                'sizeBtc':      home,
+                                'averagePrice': pos['entry_price'],
+                                'floatingPl': pos['unrealised_pnl']}
+                except:
+                    abc = 123
             if ex == 'bitmex':
-                positions = self.mex.Position.Position_get(filter=json.dumps({'symbol': 'XBTUSD'})).result()[0]
-                
-                for pos in positions:
-                    if pos[ 'symbol' ] in self.futures['bitmex']:
-                        if 'ETH' in pos[ 'symbol' ]:
-                             pos[ 'symbol' ] = "ETHUSD"
-                        size = pos['currentQty']
-                        sizeBtc =  pos['homeNotional']
-                        if 'ETH' in pos['symbol']:
-                            sizeBtc = sizeBtc * self.ethrate
-                        self.positions[pos['symbol']] = {
-                            'size':         size,
-                            'sizeBtc':         pos['homeNotional'],
-                            'averagePrice': pos['avgEntryPrice'],
-                            'floatingPl': pos['unrealisedPnlPcnt']}
-              
+                try:
+                    positions = self.mex.Position.Position_get(filter=json.dumps({'symbol': 'XBTUSD'})).result()[0]
+                    
+                    for pos in positions:
+                        if pos[ 'symbol' ] in self.futures['bitmex']:
+                            if 'ETH' in pos[ 'symbol' ]:
+                                 pos[ 'symbol' ] = "ETHUSD"
+                            size = pos['currentQty']
+                            sizeBtc =  pos['homeNotional']
+                            if 'ETH' in pos['symbol']:
+                                sizeBtc = sizeBtc * self.ethrate
+                            self.positions[pos['symbol']] = {
+                                'size':         size,
+                                'sizeBtc':         pos['homeNotional'],
+                                'averagePrice': pos['avgEntryPrice'],
+                                'floatingPl': pos['unrealisedPnlPcnt']}
+                    except:
                         #print(pos)
                         abc123 = 1
 if __name__ == '__main__':
