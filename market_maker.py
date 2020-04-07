@@ -1,18 +1,6 @@
 # This code is for sample purposes only, comes as is and with no warranty or guarantee of performance
-import threading
 from bitmex_websocket import BitMEXWebsocket
 
-from queue import Queue
-
-print_lock = threading.Lock()
-
-def threader():
-  while True:
-    # get the job from the front of the queue
-    threadTest(q.get())
-    q.task_done()
-
-q = Queue()
 from collections    import OrderedDict
 from datetime       import datetime
 from os.path        import getmtime
@@ -142,13 +130,7 @@ class MarketMaker( object ):
         self.this_mtime         = None
         self.ts                 = None
         self.vols               = OrderedDict()
-    def threader():
-        while True:
-            # get the job from the front of the queue
-            threadTest(q.get())
-            q.task_done()
-
-        q = Queue()
+    
     def update_rates( self ):
         #try:
         #    res = requests.get('https://futures.kraken.com/derivatives/api/v3/tickers').json()
@@ -937,7 +919,9 @@ class MarketMaker( object ):
                 else:
                     print('third option')
                     if shorts > 1 or longs > 1:
-                        
+                              
+                              
+                        print('first optionn')
                         for coins in self.exchangeRates:
                             h = 0
                             for funding in self.exchangeRates[coins]:
@@ -956,6 +940,7 @@ class MarketMaker( object ):
                                         
                     
                     elif shorts < longs:
+                        print('second option')
                         for coins in self.exchangeRates:
                             h = 0
                             for funding in self.exchangeRates[coins]:
@@ -981,21 +966,7 @@ class MarketMaker( object ):
                         self.arbmult[coins2][anExchange]=({"long": winner, "short": "others"})
                 #print('shorting n longing')
                 print(self.arbmult)
-            
-            for ex in self.totrade:
-                for fut in self.futures[ex]:
-                    if fut in self.futures[ex]:
-                        t = threading.Thread(target = self.place_orders, args = (ex,fut,))
-                        # this ensures the thread will die when the main thread dies
-                        # can set t.daemon to False if you want it to keep running
-                        t.daemon = True
-                        t.start()
-            gogo = True
-            while gogo == True:
-                count = threading.active_count()
-                if count < 4:
-                    gogo = False
-                    break
+            self.place_orders()
             #print('out of sleep!')
             #self.place_orders()
 
