@@ -411,9 +411,9 @@ class MarketMaker( object ):
         print('\nNet delta (exposure): $' + str(t))
         print('\nTotal absolute delta (IM exposure): $' + str(a))
         self.IM = (0.01 + ((a/self.equity_usd) *0.005))*100
-        self.IM = round(IM * 1000)/1000
+        self.IM = round(self.IM * 1000)/1000
         lev = a / self.equity_usd
-        print('Actual initial margin across all accounts: ' + str(IM) + '% and leverage is ' + str(lev) + 'x')
+        print('Actual initial margin across all accounts: ' + str(self.IM) + '% and leverage is ' + str(round(lev * 1000)/1000) + 'x')
         print( '\nMean Loop Time: %s' % round( self.mean_looptime, 2 ))
             
         print( '' )
@@ -452,7 +452,8 @@ class MarketMaker( object ):
         spot            = self.get_spot(fut)
         skew_size = 0
         #print('skew_size: ' + str(skew_size))
-        
+        nbids = 1
+        nasks = 1
         if self.IM > self.PCT_LIM_LONG:
             place_bids = False
             nbids = 0
@@ -470,9 +471,6 @@ class MarketMaker( object ):
         #print('qtybtc: ' + str(qtybtc))
         #print('qty $: ' + str(qtybtc * spot))
         #print('divided: ' + str(pos_lim_short / qtybtc))
-        nbids   = min( math.trunc( pos_lim_long  / qtybtc ), 1 )
-        nasks   = min( math.trunc( pos_lim_short / qtybtc ), 1 )
-        
         place_bids = nbids > 0
         
         place_asks = nasks > 0  
