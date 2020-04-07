@@ -452,12 +452,12 @@ class MarketMaker( object ):
         self.LEV_LIM_SHORT[token]  = self.LEV_LIM_SHORT_OLD
         self.LEV_LIM_LONG[token]  = self.LEV_LIM_LONG_OLD
         if self.arbmult[token]['short'] == ex:
-            MAX_SKEW = MAX_SKEW * 2
+            self.MAX_SKEW = self.MAX_SKEW * 2
             self.LEV_LIM_SHORT[token] = self.LEV_LIM_SHORT[token] * 2
             self.PCT_LIM_SHORT[token]  = self.PCT_LIM_SHORT[token] * 2
         
         elif self.arbmult[token]['long'] == ex:  
-            MAX_SKEW = MAX_SKEW * 2     
+            self.MAX_SKEW = self.MAX_SKEW * 2     
             self.LEV_LIM_LONG[token] = self.LEV_LIM_LONG[token] * 2
             self.PCT_LIM_LONG[token]  = self.PCT_LIM_LONG[token] * 2
         else:
@@ -600,8 +600,8 @@ class MarketMaker( object ):
             qty = qty / 10
         
         qty = int(qty)
-        MAX_SKEW = MAX_SKEW_OLD
-        MAX_SKEW = qty * 1.5
+        self.MAX_SKEW = self.MAX_SKEW_OLD
+        self.MAX_SKEW = qty * 1.5
         
         
 
@@ -658,31 +658,31 @@ class MarketMaker( object ):
                     
             if ex == 'deribit':
                 for fut in self.futures['deribit']:
-                    if token in fut and qty + skew_size < MAX_SKEW:
+                    if token in fut and qty + skew_size < self.MAX_SKEW:
                         self.client.buy( fut, qty, self.get_bbo(ex, fut)['bid'], 'true' )
                 for fut in self.futures['bybit']:
-                    if token in fut and qty + skew_size * -1 <  MAX_SKEW:
+                    if token in fut and qty + skew_size * -1 <  self.MAX_SKEW:
                          self.bit.Order.Order_new(side="Sell",symbol=fut,order_type="Limit",qty=qty,price=self.get_bbo(ex, fut)['ask'],time_in_force="PostOnly").result()
                 if token == 'BTC':
                     fut = 'XBTUSD'
                 else:
                     fut = 'ETHUSD'
-                if qty + skew_size * -1 <  MAX_SKEW:
+                if qty + skew_size * -1 <  self.MAX_SKEW:
                     self.mex.Order.Order_new(symbol=fut, orderQty=-1 * qty, price=self.get_bbo(ex, fut)['ask'],execInst="ParticipateDoNotInitiate").result()
      
      
             if ex == 'bybit':
                 for fut in self.futures['bybit']:
-                    if token in fut and qty + skew_size < MAX_SKEW:
+                    if token in fut and qty + skew_size < self.MAX_SKEW:
                          self.bit.Order.Order_new(side="Buy",symbol=fut,order_type="Limit",qty=qty,price=self.get_bbo(ex, fut)['bid'],time_in_force="PostOnly").result()
                 for fut in self.futures['deribit']:
-                    if token in fut and qty + skew_size * -1 <  MAX_SKEW:
+                    if token in fut and qty + skew_size * -1 <  self.MAX_SKEW:
                         self.client.sell( fut, qty, self.get_bbo(ex, fut)['ask'], 'true' )
                 if token == 'BTC':
                     fut = 'XBTUSD'
                 else:
                     fut = 'ETHUSD'
-                if qty + skew_size * -1 <  MAX_SKEW:
+                if qty + skew_size * -1 <  self.MAX_SKEW:
                     self.mex.Order.Order_new(symbol=fut, orderQty=-1 * qty, price=self.get_bbo(ex, fut)['ask'],execInst="ParticipateDoNotInitiate").result()
      
 
@@ -697,15 +697,15 @@ class MarketMaker( object ):
                     fut = 'ETHUSD'
                 
                 print(str(qty) + ' short qty ' + str(skew_size) + ' skew size and ' + str(MAX_SKEW))
-                if qty + skew_size < MAX_SKEW:
+                if qty + skew_size < self.MAX_SKEW:
                     print('less maxskew mex')
                     self.bit.Order.Order_new(symbol=fut, orderQty=qty, price=self.get_bbo(ex, fut)['bid'],execInst="ParticipateDoNotInitiate").result()
                 for fut in self.futures['deribit']:
-                    if token in fut and qty + skew_size * -1 <  MAX_SKEW:
+                    if token in fut and qty + skew_size * -1 <  self.MAX_SKEW:
                         print('tokenfut long! deribit ' + fut)
                         self.client.sell( fut, qty, self.get_bbo(ex, fut)['ask'], 'true' )
                 for fut in self.futures['bybit']:
-                    if token in fut and qty + skew_size * -1 <  MAX_SKEW:
+                    if token in fut and qty + skew_size * -1 <  self.MAX_SKEW:
                         print('tokenfut long! bybit ' + fut) 
                         self.bit.Order.Order_new(side="Sell",symbol=fut,order_type="Limit",qty=qty,price=self.get_bbo(ex, fut)['ask'],time_in_force="PostOnly").result()
                 
@@ -726,31 +726,31 @@ class MarketMaker( object ):
 
             if ex == 'deribit':
                 for fut in self.futures['deribit']:
-                    if token in fut and qty + skew_size * -1 <  MAX_SKEW:
+                    if token in fut and qty + skew_size * -1 <  self.MAX_SKEW:
                         self.client.sell( fut, qty, self.get_bbo(ex, fut)['ask'], 'true' )
                 for fut in self.futures['bybit']:
-                    if token in fut and qty + skew_size < MAX_SKEW:
+                    if token in fut and qty + skew_size < self.MAX_SKEW:
                          self.bit.Order.Order_new(side="Buy",symbol=fut,order_type="Limit",qty=qty,price=self.get_bbo(ex, fut)['bid'],time_in_force="PostOnly").result()
                 if token == 'BTC':
                     fut = 'XBTUSD'
                 else:
                     fut = 'ETHUSD'
-                if qty + skew_size < MAX_SKEW:
+                if qty + skew_size < self.MAX_SKEW:
                     self.mex.Order.Order_new(symbol=fut, orderQty=-qty, price=self.get_bbo(ex, fut)['bid'],execInst="ParticipateDoNotInitiate").result()
      
      
             if ex == 'bybit':
                 for fut in self.futures['bybit']:
-                    if token in fut and qty + skew_size * -1 <  MAX_SKEW:
+                    if token in fut and qty + skew_size * -1 <  self.MAX_SKEW:
                          self.bit.Order.Order_new(side="Sell",symbol=fut,order_type="Limit",qty=qty,price=self.get_bbo(ex, fut)['ask'],time_in_force="PostOnly").result()
                 for fut in self.futures['deribit']:
-                    if token in fut and qty + skew_size < MAX_SKEW:
+                    if token in fut and qty + skew_size < self.MAX_SKEW:
                         self.client.buy( fut, qty, self.get_bbo(ex, fut)['ask'], 'true' )
                 if token == 'BTC':
                     fut = 'XBTUSD'
                 else:
                     fut = 'ETHUSD'
-                if qty + skew_size < MAX_SKEW:
+                if qty + skew_size < self.MAX_SKEW:
                     self.mex.Order.Order_new(symbol=fut, orderQty=qty, price=self.get_bbo(ex, fut)['bid'],execInst="ParticipateDoNotInitiate").result()
      
 
@@ -764,16 +764,16 @@ class MarketMaker( object ):
                 else:
                     fut = 'ETHUSD'
                 print(str(qty) + ' qty long     ' + str(skew_size) + ' skew size and ' + str(MAX_SKEW))
-                if qty + skew_size * -1 <  MAX_SKEW:
+                if qty + skew_size * -1 <  self.MAX_SKEW:
                     print('short mex unskewed')
                     self.bit.Order.Order_new(symbol=fut, orderQty=-1 * qty, price=self.get_bbo(ex, fut)['ask'],execInst="ParticipateDoNotInitiate").result()
                 for fut in self.futures['deribit']:
-                    if token in fut and qty + skew_size < MAX_SKEW:
+                    if token in fut and qty + skew_size < self.MAX_SKEW:
                         print('tokenfut! ' + fut + ' deribit')
                         self.client.buy( fut, qty, self.get_bbo(ex, fut)['bid'], 'true' )
                 for fut in self.futures['bybit']:
                         
-                    if token in fut and qty + skew_size < MAX_SKEW:
+                    if token in fut and qty + skew_size < self.MAX_SKEW:
                         print('tokenfut! ' + fut + ' bybit')
                         self.bit.Order.Order_new(side="Buy",symbol=fut,order_type="Limit",qty=qty,price=self.get_bbo(ex, fut)['bid'],time_in_force="PostOnly").result()
                 
