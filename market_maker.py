@@ -1,5 +1,18 @@
 # This code is for sample purposes only, comes as is and with no warranty or guarantee of performance
+import threading
 from bitmex_websocket import BitMEXWebsocket
+
+from queue import Queue
+
+print_lock = threading.Lock()
+
+def threader():
+    while True:
+        # get the job from the front of the queue
+        threadTest(q.get())
+        q.task_done()
+
+    q = Queue()
 
 from collections    import OrderedDict
 from datetime       import datetime
@@ -371,7 +384,7 @@ class MarketMaker( object ):
 
         
     def place_orders( self ):
-        for ex in totrade:
+        for ex in self.totrade:
             for fut in self.futures[ex]:
                 token = 'BTC'
                 if 'ETH' in fut:
@@ -591,6 +604,11 @@ class MarketMaker( object ):
 
     def execute_arb ( self, ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords):
         for coin in self.arbmult:
+            try:
+                prc = self.get_bbo['bid']
+            except:
+                print('no bid, returning')
+                return
             qty = round ( float(prc) * qtybtc )
             if qty > self.maxqty:
                 self.maxqty = qty
@@ -602,11 +620,7 @@ class MarketMaker( object ):
             self.PCT_LIM_SHORT  = self.maxqty * 20
             self.PCT_LIM_LONG  = self.maxqty * 20
             # bid edit
-            try:
-                prc = self.get_bbo['bid']
-            except:
-                print('no bid, returning')
-                return
+            
             try: 
                 oid = bid_ords[ i ][ 'orderId' ]
             except:
@@ -809,6 +823,8 @@ class MarketMaker( object ):
         finally:
             os.execv( sys.executable, [ sys.executable ] + sys.argv )        
             
+    
+
 
     def run( self ):
         
@@ -892,7 +908,23 @@ class MarketMaker( object ):
                         self.arbmult[coins2][anExchange]=({"long": winner, "short": "others"})
                 #print('shorting n longing')
                 print(self.arbmult)
-            self.place_orders()
+            for ex in self.totrade:
+                for fut in self.futures[ex]:
+                    if fut in self.futures[ex]:
+                        t = threading.Thread(target = self.place_orders, args = (ex,fut,))
+                        # this ensures the thread will die when the main thread dies
+                        # can set t.daemon to False if you want it to keep running
+                        t.daemon = True
+                        t.start()
+            gogo = True
+            while gogo == True:
+                count = threading.active_count()
+                if count < 4:
+                    gogo = False
+                    break
+
+
+            #self.place_orders()
             #print('out of sleep!')
             #self.place_orders()
 
