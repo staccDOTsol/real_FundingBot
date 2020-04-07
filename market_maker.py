@@ -290,7 +290,7 @@ class MarketMaker( object ):
             
         if exchange == 'bitmex':
             
-            t = self.ws[contract].get_ticker()
+            t = self.ws[contract].get_ticker2()
 
             
             best_ask = t['sell']
