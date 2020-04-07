@@ -119,6 +119,10 @@ class MarketMaker( object ):
 
         self.percs = {}
         self.maxqty = 25
+        self.PCT_LIM_LONG = {}
+        self.PCT_LIM_SHORT = {}
+        self.LEV_LIM_LONG = {}
+        self.LEV_LIM_SHORT = {}
         for token in self.exchangeRates:
             self.PCT_LIM_LONG[token]        = 16.7       # % position limit long
             self.LEV_LIM_LONG[token] = 1.5
