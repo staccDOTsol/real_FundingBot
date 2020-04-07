@@ -265,7 +265,7 @@ class MarketMaker( object ):
     def get_eth( self ):
         r = requests.get('https://api.binance.com/api/v1/ticker/price?symbol=ETHUSDT').json()
         return float(r['price'])
-    def get_bbo( self, contract, exchange ): # Get best b/o excluding own orders
+    def get_bbo( self, exchange, contract ): # Get best b/o excluding own orders
         if exchange == 'deribit':
             # Get orderbook
             ob      = self.client.getorderbook( contract )
@@ -383,229 +383,226 @@ class MarketMaker( object ):
         print( '' )
 
         
-    def place_orders( self ):
-        for ex in self.totrade:
-            for fut in self.futures[ex]:
-                token = 'BTC'
-                if 'ETH' in fut:
-                    token = 'ETH'
-                if self.monitor:
-                    return None
-                con_sz  = self.con_size        
-                 ## FIX THIS IN PROD
+    def place_orders( self, ex, fut ):
 
-                MAX_SKEW = MAX_SKEW_OLD
-                self.PCT_LIM_SHORT  = self.PCT_LIM_SHORT_OLD
-                self.PCT_LIM_LONG  = self.PCT_LIM_LONG_OLD
+        token = 'BTC'
+        if 'ETH' in fut:
+            token = 'ETH'
+        if self.monitor:
+            return None
+        con_sz  = self.con_size        
+         ## FIX THIS IN PROD
 
-                bal_btc         = self.bals['total']
-                #print('yo place orders ' + ex + ': ' + fut)
-                if ex in self.arbmult[token]:
-                    if self.arbmult[token][ex]['short'] == ex or self.arbmult[token][ex]['long'] != ex :
-                        MAX_SKEW = MAX_SKEW * 2
-                        self.PCT_LIM_SHORT  = self.PCT_LIM_SHORT * 2
-                        self.PCT_LIM_LONG  = self.PCT_LIM_LONG * 2
-                        
-                if ex == 'bybit' and 'BTC' in fut:
-                    fut = fut.split('-')[0] 
-                if 'ETH' in fut:
-                    self.PCT_LIM_SHORT  = self.PCT_LIM_SHORT * self.percs['ETH']
-                    self.PCT_LIM_LONG  = self.PCT_LIM_LONG * self.percs['ETH']
-                else:
-                    self.PCT_LIM_SHORT  = self.PCT_LIM_SHORT * self.percs['BTC']
-                    self.PCT_LIM_LONG  = self.PCT_LIM_LONG * self.percs['BTC']
-                spot            = self.get_spot(fut)
-                skew_size = 0
-                #print('skew_size: ' + str(skew_size))
-                if ex == 'deribit':
-                    #print(self.positions)
-                    for k in self.positions:
-                        skew_size = skew_size + self.positions[k]['size']
-                        #print('skew_size: ' + str(skew_size))
-                    psize = self.positions[fut]['size']
-                    
+        MAX_SKEW = MAX_SKEW_OLD
+        self.PCT_LIM_SHORT  = self.PCT_LIM_SHORT_OLD
+        self.PCT_LIM_LONG  = self.PCT_LIM_LONG_OLD
 
-
-                    if psize < 0:
-                        psize = psize * -1
-                    account         = self.client.account()
-                    
-                    pos             = self.positions[ fut ][ 'sizeBtc' ]
-                    #print(self.PCT_LIM_SHORT)
-                    pos_lim_long    = bal_btc * (self.PCT_LIM_LONG * 10) / spot
-                    pos_lim_short   = bal_btc * (self.PCT_LIM_SHORT * 10) / spot
-                    if 'ETH' in fut:
-                        pos_lim_long    = bal_btc / self.ethrate * (self.PCT_LIM_LONG * 10) / spot
-                        pos_lim_short   = bal_btc / self.ethrate * (self.PCT_LIM_SHORT * 10) / spot
-                    
-                    #print(pos_lim_short)
-                    pos_lim_long   -= pos
-                    pos_lim_short  += pos
-                    #print(pos_lim_short)
-                    pos_lim_long    = max( 0, pos_lim_long  )
-                    pos_lim_short   = max( 0, pos_lim_short )
-                    
-                    
+        bal_btc         = self.bals['total']
+        #print('yo place orders ' + ex + ': ' + fut)
+        if ex in self.arbmult[coin]:
+            if self.arbmult[coin][ex]['short'] == ex or self.arbmult[coin][ex]['long'] != ex :
+                MAX_SKEW = MAX_SKEW * 2
+                self.PCT_LIM_SHORT  = self.PCT_LIM_SHORT * 2
+                self.PCT_LIM_LONG  = self.PCT_LIM_LONG * 2
                 
-                # bybit prep place_orders
-                
-                if ex == 'bybit':
-                    
-                    for k in self.positions:
-                        skew_size = skew_size + self.positions[k]['size']
-                        #print('skew_size: ' + str(skew_size))
-                    if 'ETH' in fut:
-                        fut2 = fut.split('-')[0]
-                        psize = self.positions[fut2 + '-' + ex]['size']
-                        spot            = self.get_spot(fut2 + '-' + ex)
-                        pos             = self.positions[ fut2  + '-' + ex ][ 'sizeBtc' ]
-
-                    else:
-                        psize = self.positions[fut]['size']
-                        spot            = self.get_spot(fut)
-                        pos             = self.positions[ fut  ][ 'sizeBtc' ]
-
-                    if psize < 0:
-                        psize = psize * -1
-                    #print(fut)
-
-                    #print(self.PCT_LIM_SHORT)
-                    pos_lim_long    = bal_btc * (self.PCT_LIM_LONG * 10) / spot
-                    pos_lim_short   = bal_btc * (self.PCT_LIM_SHORT * 10) / spot
-                    #print(pos_lim_short)
-                    pos_lim_long   -= pos
-                    pos_lim_short  += pos
-                    #print(pos_lim_short)
-                    pos_lim_long    = max( 0, pos_lim_long  )
-                    pos_lim_short   = max( 0, pos_lim_short )
-                  
-                # self.bitmex 
-                
-                if ex == 'bitmex':
-                    for k in self.positions:
-                        skew_size = skew_size + self.positions[k]['size']
-                        #print('skew_size: ' + str(skew_size))
-                    psize = self.positions[fut]['size']
-                    
-
-                    if psize < 0:
-                        psize = psize * -1
-                    pos             = self.positions[ fut ][ 'sizeBtc' ]
-                    #print(self.PCT_LIM_SHORT)
-                    pos_lim_long    = bal_btc * (self.PCT_LIM_LONG * 10) / spot
-                    pos_lim_short   = bal_btc * (self.PCT_LIM_SHORT * 10) / spot
-                    #print(pos_lim_short)
-                    pos_lim_long   -= pos
-                    pos_lim_short  += pos
-                    #print(pos_lim_short)
-                    pos_lim_long    = max( 0, pos_lim_long  )
-                    pos_lim_short   = max( 0, pos_lim_short )
-                    
-                    #print(pos_lim_short)
-                   
-
-                    #print(place_bids)
-                    #print(place_asks)
-                min_order_size_btc = MIN_ORDER_SIZE / spot
-                # 18 / (7000) 0.02571428571428571428571428571429
-                # 22 / (7000) 0.00314285714285714285714285714286
-                #print('qty of bal: ' + str(PCT_QTY_BASE  * bal_btc))
-                #print(str(PCT_QTY_BASE  * bal_btc * spot) + '$')
-                qtybtc  = float(max( PCT_QTY_BASE  * bal_btc, min_order_size_btc))
-                #print('qtybtc: ' + str(qtybtc))
-                #print('qty $: ' + str(qtybtc * spot))
-                #print('divided: ' + str(pos_lim_short / qtybtc))
-                nbids   = min( math.trunc( pos_lim_long  / qtybtc ), 1 )
-                nasks   = min( math.trunc( pos_lim_short / qtybtc ), 1 )
-                
-                place_bids = nbids > 0
-                
-                place_asks = nasks > 0  
-                print('place_x2L ' + ex + '-' + fut)
-                print(place_bids)
-                print(place_asks)
-
+        if ex == 'bybit' and 'BTC' in fut:
+            fut = fut.split('-')[0] 
+        if 'ETH' in fut:
+            self.PCT_LIM_SHORT  = self.PCT_LIM_SHORT * self.percs['ETH']
+            self.PCT_LIM_LONG  = self.PCT_LIM_LONG * self.percs['ETH']
+        else:
+            self.PCT_LIM_SHORT  = self.PCT_LIM_SHORT * self.percs['BTC']
+            self.PCT_LIM_LONG  = self.PCT_LIM_LONG * self.percs['BTC']
+        spot            = self.get_spot(fut)
+        skew_size = 0
+        #print('skew_size: ' + str(skew_size))
+        if ex == 'deribit':
+            #print(self.positions)
             
-                if not place_bids and not place_asks:
-                    #print( 'No bid no offer for %s' % fut, math.trunc( pos_lim_long  / qtybtc ) )
-                    return 
-                #print('fut: ' + fut)    
-                tsz = self.get_ticksize( fut )            
-                eps         = 0.0001 * 0.5
-                riskfac     = math.exp( eps )
+            psize = self.positions[fut]['size']
+            
 
-                bbo     = self.get_bbo( fut, ex )
-                bid_mkt = bbo[ 'bid' ]
-                ask_mkt = bbo[ 'ask' ]
-                
-                if bid_mkt is None and ask_mkt is None:
-                    bid_mkt = ask_mkt = spot
-                elif bid_mkt is None:
-                    bid_mkt = min( spot, ask_mkt )
-                elif ask_mkt is None:
-                    ask_mkt = max( spot, bid_mkt )
-                
-                cancel_oids = []
-                bid_ords = ords  = ask_ords = []
-                if ex == 'deribit':
-                    try:
-                        ords        = self.client.getopenorders( fut )
-                        bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
-                        
-                        ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]
-                    except Exception as e:
-                        print(e)
-                if ex == 'bybit':
-                    try:
-                        ords = self.bit.Order.Order_getOrders(symbol=fut).result()[0]['result']
-                        if 'data' in ords:
-                            ords2 = ords['data']
-                            bid_ords        = [ o for o in ords if o[ 'side' ] == 'Buy'  ]
-                        
-                            ask_ords        = [ o for o in ords if o[ 'side' ] == 'Sell' ]
-                        print(ords2)
-                    except Exception as e:
-                        print(e)
-                if ex == 'bitmex':
-                    #print(ords)
-                    ords1 = self.mex.Order.Order_getOrders(symbol=fut, reverse=True, count=500).result()[0]
-                    ords = []
-                    for order in ords1:
 
-                        if order['ordStatus'].lower() == 'new':
-                            ords.append(order)
+            if psize < 0:
+                psize = psize * -1
+            account         = self.client.account()
+            
+            pos             = self.positions[ fut ][ 'sizeBtc' ]
+            #print(self.PCT_LIM_SHORT)
+            pos_lim_long    = bal_btc * (self.PCT_LIM_LONG * 10) / spot
+            pos_lim_short   = bal_btc * (self.PCT_LIM_SHORT * 10) / spot
+            if 'ETH' in fut:
+                pos_lim_long    = bal_btc / self.ethrate * (self.PCT_LIM_LONG * 10) / spot
+                pos_lim_short   = bal_btc / self.ethrate * (self.PCT_LIM_SHORT * 10) / spot
+            
+            #print(pos_lim_short)
+            pos_lim_long   -= pos
+            pos_lim_short  += pos
+            #print(pos_lim_short)
+            pos_lim_long    = max( 0, pos_lim_long  )
+            pos_lim_short   = max( 0, pos_lim_short )
+            
+            
+        
+        # bybit prep place_orders
+        
+        if ex == 'bybit':
+            
+            
+            if 'ETH' in fut:
+                fut2 = fut.split('-')[0]
+                psize = self.positions[fut2 + '-' + ex]['size']
+                spot            = self.get_spot(fut2 + '-' + ex)
+                pos             = self.positions[ fut2  + '-' + ex ][ 'sizeBtc' ]
+
+            else:
+                psize = self.positions[fut]['size']
+                spot            = self.get_spot(fut)
+                pos             = self.positions[ fut  ][ 'sizeBtc' ]
+
+            if psize < 0:
+                psize = psize * -1
+            #print(fut)
+
+            #print(self.PCT_LIM_SHORT)
+            pos_lim_long    = bal_btc * (self.PCT_LIM_LONG * 10) / spot
+            pos_lim_short   = bal_btc * (self.PCT_LIM_SHORT * 10) / spot
+            #print(pos_lim_short)
+            pos_lim_long   -= pos
+            pos_lim_short  += pos
+            #print(pos_lim_short)
+            pos_lim_long    = max( 0, pos_lim_long  )
+            pos_lim_short   = max( 0, pos_lim_short )
+          
+        # self.bitmex 
+        
+        if ex == 'bitmex':
+            
+            psize = self.positions[fut]['size']
+            
+
+            if psize < 0:
+                psize = psize * -1
+            pos             = self.positions[ fut ][ 'sizeBtc' ]
+            #print(self.PCT_LIM_SHORT)
+            pos_lim_long    = bal_btc * (self.PCT_LIM_LONG * 10) / spot
+            pos_lim_short   = bal_btc * (self.PCT_LIM_SHORT * 10) / spot
+            #print(pos_lim_short)
+            pos_lim_long   -= pos
+            pos_lim_short  += pos
+            #print(pos_lim_short)
+            pos_lim_long    = max( 0, pos_lim_long  )
+            pos_lim_short   = max( 0, pos_lim_short )
+            
+            #print(pos_lim_short)
+           
+
+            #print(place_bids)
+            #print(place_asks)
+        min_order_size_btc = MIN_ORDER_SIZE / spot
+        # 18 / (7000) 0.02571428571428571428571428571429
+        # 22 / (7000) 0.00314285714285714285714285714286
+        #print('qty of bal: ' + str(PCT_QTY_BASE  * bal_btc))
+        #print(str(PCT_QTY_BASE  * bal_btc * spot) + '$')
+        qtybtc  = float(max( PCT_QTY_BASE  * bal_btc, min_order_size_btc))
+        #print('qtybtc: ' + str(qtybtc))
+        #print('qty $: ' + str(qtybtc * spot))
+        #print('divided: ' + str(pos_lim_short / qtybtc))
+        nbids   = min( math.trunc( pos_lim_long  / qtybtc ), 1 )
+        nasks   = min( math.trunc( pos_lim_short / qtybtc ), 1 )
+        
+        place_bids = nbids > 0
+        
+        place_asks = nasks > 0  
+        print('place_x2L ' + ex + '-' + fut)
+        print(place_bids)
+        print(place_asks)
+
+    
+        if not place_bids and not place_asks:
+            #print( 'No bid no offer for %s' % fut, math.trunc( pos_lim_long  / qtybtc ) )
+            return 
+        #print('fut: ' + fut)    
+        tsz = self.get_ticksize( fut )            
+        eps         = 0.0001 * 0.5
+        riskfac     = math.exp( eps )
+
+        bbo     = self.get_bbo( ex, fut )
+        bid_mkt = bbo[ 'bid' ]
+        ask_mkt = bbo[ 'ask' ]
+        
+        if bid_mkt is None and ask_mkt is None:
+            bid_mkt = ask_mkt = spot
+        elif bid_mkt is None:
+            bid_mkt = min( spot, ask_mkt )
+        elif ask_mkt is None:
+            ask_mkt = max( spot, bid_mkt )
+        
+        cancel_oids = []
+        bid_ords = ords  = ask_ords = []
+        if ex == 'deribit':
+            try:
+                ords        = self.client.getopenorders( fut )
+                bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                
+                ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]
+            except Exception as e:
+                print(e)
+        if ex == 'bybit':
+            try:
+                ords = self.bit.Order.Order_getOrders(symbol=fut).result()[0]['result']
+                if 'data' in ords:
+                    ords2 = ords['data']
                     bid_ords        = [ o for o in ords if o[ 'side' ] == 'Buy'  ]
-                    
+                
                     ask_ords        = [ o for o in ords if o[ 'side' ] == 'Sell' ]
-               
-                asks = []
-                bids = []
-                len_bid_ords    = min( len( bid_ords ), nbids )
-                len_ask_ords    = min( len( ask_ords ), nasks )
-                if place_bids:
-                    bids.append(bid_mkt)
-                if place_asks:
-                    asks.append(ask_mkt)
-                #print(fut)
-                #print(fut)
-                #print(fut)
-                #print(fut)
-                #print(fut)
-                #print(fut)
-                #print(fut)
+                print(ords2)
+            except Exception as e:
+                print(e)
+        if ex == 'bitmex':
+            #print(ords)
+            ords1 = self.mex.Order.Order_getOrders(symbol=fut, reverse=True, count=500).result()[0]
+            ords = []
+            for order in ords1:
 
-                place_bids = len(bids) > 0
-                place_asks = len(asks) > 0
-                #print(place_asks)
-                if ex == 'bybit' and 'ETH' in fut:
-                    fut =  fut.split('-')[0]
-                self.execute_arb (ex, fut, psize, skew_size, nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords )    
+                if order['ordStatus'].lower() == 'new':
+                    ords.append(order)
+            bid_ords        = [ o for o in ords if o[ 'side' ] == 'Buy'  ]
+            
+            ask_ords        = [ o for o in ords if o[ 'side' ] == 'Sell' ]
+       
+        asks = []
+        bids = []
+        len_bid_ords    = min( len( bid_ords ), nbids )
+        len_ask_ords    = min( len( ask_ords ), nasks )
+        if place_bids:
+            bids.append(bid_mkt)
+        if place_asks:
+            asks.append(ask_mkt)
+        #print(fut)
+        #print(fut)
+        #print(fut)
+        #print(fut)
+        #print(fut)
+        #print(fut)
+        #print(fut)
+
+        place_bids = len(bids) > 0
+        place_asks = len(asks) > 0
+        #print(place_asks)
+        if ex == 'bybit' and 'ETH' in fut:
+            fut =  fut.split('-')[0]
+        self.execute_arb (ex, fut, psize, skew_size, nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords )    
 
 
     def execute_arb ( self, ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords):
+        for k in self.positions:
+            skew_size = skew_size + self.positions[k]['size']
+            print('skew_size: ' + str(skew_size))
+        i = 0
         for coin in self.arbmult:
             try:
-                prc = self.get_bbo['bid']
+                prc = self.get_bbo(ex, fut)['bid']
             except:
                 print('no bid, returning')
                 return
@@ -620,42 +617,46 @@ class MarketMaker( object ):
             self.PCT_LIM_SHORT  = self.maxqty * 20
             self.PCT_LIM_LONG  = self.maxqty * 20
             # bid edit
-            
-            try: 
-                oid = bid_ords[ i ][ 'orderId' ]
-            except:
-                oid = bid_ords[ i ][ 'orderID' ]
             try:
-                if ex == 'deribit':
-                    self.client.edit( oid, qty, prc )
-                if ex == 'bybit':
-                    self.bit.Order.Order_replace(order_id=oid, symbol=fut).result()
-                if ex == 'bitmex':
-                    self.mex.Order.Order_amend(orderID=oid, price=prc).result()
+                try: 
+                    oid = bid_ords[ i ][ 'orderId' ]
+                except:
+                    oid = bid_ords[ i ][ 'orderID' ]
+                try:
+                    if ex == 'deribit':
+                        self.client.edit( oid, qty, prc )
+                    if ex == 'bybit':
+                        self.bit.Order.Order_replace(order_id=oid, symbol=fut).result()
+                    if ex == 'bitmex':
+                        self.mex.Order.Order_amend(orderID=oid, price=prc).result()
+                except:
+                    abc = 123
             except:
-                abc = 123
+                    abc = 123
             # ask edit
             try:
-                prc = self.get_bbo['ask']
+                prc = self.get_bbo(ex, fut)['ask']
             except:
                 print('no ask, returning')
                 return
-            try: 
-                oid = ask_ords[ i ][ 'orderId' ]
-            except:
-                oid = ask_ords[ i ][ 'orderID' ]
             try:
-                if ex == 'deribit':
-                    self.client.edit( oid, qty, prc )
-                if ex == 'bybit':
-                    self.bit.Order.Order_replace(order_id=oid, symbol=fut).result()
-                if ex == 'bitmex':
-                    self.mex.Order.Order_amend(orderID=oid, price=prc).result()
+                try: 
+                    oid = ask_ords[ i ][ 'orderId' ]
+                except:
+                    oid = ask_ords[ i ][ 'orderID' ]
+                try:
+                    if ex == 'deribit':
+                        self.client.edit( oid, qty, prc )
+                    if ex == 'bybit':
+                        self.bit.Order.Order_replace(order_id=oid, symbol=fut).result()
+                    if ex == 'bitmex':
+                        self.mex.Order.Order_amend(orderID=oid, price=prc).result()
+                except:
+                    abc = 123
             except:
                 abc = 123
-            
             # Long
-            if self.arbmult[token][ex]['long'] == ex and place_bids: # Ok! You win! You can long!
+            if self.arbmult[coin][ex]['long'] == ex and place_bids: # Ok! You win! You can long!
                 if qty + skew_size >  MAX_SKEW:
                     print('max skew, returning')
                     return
@@ -706,7 +707,7 @@ class MarketMaker( object ):
 
                 self.execute_cancels(ex, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
             # Short
-            if self.arbmult[token][ex]['short'] == ex and place_asks: # Ok! You win! You can short!
+            if self.arbmult[coin][ex]['short'] == ex and place_asks: # Ok! You win! You can short!
             
                 if qty + skew_size * -1 >  MAX_SKEW:
                     print('offer max_skew return ...')
