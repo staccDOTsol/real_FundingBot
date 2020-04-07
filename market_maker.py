@@ -793,7 +793,7 @@ class MarketMaker( object ):
     def restart( self ):        
         try:
             strMsg = 'RESTARTING'
-            #print( strMsg )
+            print( strMsg )
             self.client.cancelall()
             self.mex.Order.Order_cancelAll().result()
             self.bit.Order.cancelAll().result()
@@ -865,99 +865,23 @@ class MarketMaker( object ):
                         wl2 = funding
                 winner = ""
                 coin = ""
-                if longs == 3 or shorts == 3:
-                    print('1st option')
-                    #print("3 long or short...")
-                    for coins in self.exchangeRates:
-                        h = 0
-                        
-                        for funding in self.exchangeRates[coins]:
-                            k = funding
-                            val = self.exchangeRates[coins][funding]
-                            #print(k)
-                            #print(val)
-                            if math.fabs(val) > h:
-                                h = val
-                                winner = k
-                                if val > 0:
-                                    positive = True
-                                    
-                                else:
-                                    positive = False
-                                    
-                elif (wh2 != "" and wh2 != wh) or (wl2 != "" and wl2 != wl):
-                    print('2nd option')
-                    if wh2 != "" and wh2 != wh:
-                        #print('two longs: ' + wh + ' and ' + wh2)
-                        for coins in self.exchangeRates:
-                            for funding in self.exchangeRates[coins]:
-                                if funding != wh and funding != wh2:
-                                    winner = funding
-                                    val = self.exchangeRates[coins][funding]
-                                    if val > 0:
-                                        positive = True
-                                        
-                                    else:
-                                        positive = False
-                                        
-
-                                    
-                    if wl2 != "" and wl2 != wl:
-                        #print('two shorts: ' + wl + ' and ' + wl2)
-                        for coins in self.exchangeRates:
-                            for funding in self.exchangeRates[coins]:
-                                if funding != wh and funding != wh2:
-                                    winner = funding
-                                    val = self.exchangeRates[coins][funding]
-                                    if val > 0:
-                                        positive = True
-                                        
-                                    else:
-                                        positive = False
-                                        
+                for coins in self.exchangeRates:
+                    h = 0
                     
-                else:
-                    print('third option')
-                    if shorts > 1 or longs > 1:
+                    for funding in self.exchangeRates[coins]:
+                        k = funding
+                        val = self.exchangeRates[coins][funding]
+                        #print(k)
+                        #print(val)
+                        if math.fabs(val) > h:
+                            h = val
+                            winner = k
+                            if val > 0:
+                                positive = True
+                                
+                            else:
+                                positive = False
                               
-                              
-                        print('first optionn')
-                        for coins in self.exchangeRates:
-                            h = 0
-                            for funding in self.exchangeRates[coins]:
-                                k = funding
-                                val = self.exchangeRates[coins][funding]
-                                #print(k)
-                                #print(val)
-                                if math.fabs(val) > h:
-                                    h = val
-                                    winner = k
-                                    if val > 0:
-                                        positive = True
-                                        
-                                    else:
-                                        positive = False
-                                        
-                    
-                    elif shorts < longs:
-                        print('second option')
-                        for coins in self.exchangeRates:
-                            h = 0
-                            for funding in self.exchangeRates[coins]:
-                                k = funding
-                                val = self.exchangeRates[coins][funding]
-                                #print(k)
-                                #print(val)
-                                if math.fabs(val) > h:
-                                    h = val
-                                    winner = k
-                                    if val > 0:
-                                        positive = False
-                                        
-                                    else:
-                                        positive = True
-                                        
-                
                 
                 for anExchange in self.totrade:
                     if positive == True:
@@ -1117,7 +1041,7 @@ if __name__ == '__main__':
         mmbot.bit.Order.cancelAll().result()
         sys.exit()
     except:
-        #print( traceback.format_exc())
+        print( traceback.format_exc())
         if args.restart:
             mmbot.restart()
         
