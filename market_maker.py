@@ -213,7 +213,7 @@ class MarketMaker( object ):
             PrintException() # PrintException()
         try:
             
-                res = self.bit.Funding.Funding_getRate(symbol="BTCUSD").result()
+            res = self.bit.Funding.Funding_getRate(symbol="BTCUSD").result()
             res = res[0]['result']['funding_rate'] * 3
 
             self.exchangeRates['BTC']['bybit'] = res
