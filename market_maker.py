@@ -936,7 +936,7 @@ class MarketMaker( object ):
                             
                             if 'bybit' in fut:
                                 fut = "ETHUSD"
-                            if math.fabs(self.positions[fut]['size']) != 0 and math.fabs(self.positions[fut]['size']) > 1.33 * math.fabs(self.positions[afut]['size']):
+                            if  math.fabs(self.positions[fut]['size']) != 0 and math.fabs(self.positions[fut]['size']) > 1.33 * math.fabs(self.positions[afut]['size']):
                                 print('reduced at a profit too much! We must now lose!')
                                 r = self.bit.Order.Order_new(side="Sell",symbol=fut,order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['ask'],time_in_force="PostOnly").result()
                                     
@@ -1056,7 +1056,7 @@ class MarketMaker( object ):
                 while done == False:
                     number = random.randint(0,5)
                     if number not in taken:
-                        sleep(2.5)
+                        sleep(1)
                         taken.append(number)
                         print(arr[number])
                         done = True
