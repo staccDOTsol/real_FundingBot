@@ -672,7 +672,7 @@ class MarketMaker( object ):
         for fut in self.positions:
             print(fut)
             print(self.positions[fut])
-            if self.positions[fut]['floatingPl'] > 0:
+            if self.positions[fut]['floatingPl'] > 0.01 and math.fabs(self.positions[fut]['size']) > 500:
                 print(fut + ' in profit! Gonna reduce!')
         
         
