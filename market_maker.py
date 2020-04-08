@@ -1043,6 +1043,7 @@ class MarketMaker( object ):
                 for fut in self.futures[ex]:
                
                     arr.append({"fut": fut, "ex": ex})
+            self.client.cancelall()
             self.mex.Order.Order_cancelAll(symbol='ETHUSD').result()
             self.bit.Order.Order_cancelAll(symbol='BTCUSD').result()
             self.mex.Order.Order_cancelAll(symbol='XBTUSD').result()
@@ -1061,6 +1062,7 @@ class MarketMaker( object ):
                         done = True
                         t = threading.Thread(target=self.place_orders, args=(arr[i]['ex'],arr[i]['fut'],))
                         t.start()
+            taken = []
             for i in range(6):
                 print(i)
                 done = False
@@ -1073,6 +1075,7 @@ class MarketMaker( object ):
                         done = True
                         t = threading.Thread(target=self.place_orders, args=(arr[i]['ex'],arr[i]['fut'],))
                         t.start()
+            taken = []
             for i in range(6):
                 print(i)
                 done = False
@@ -1099,7 +1102,6 @@ class MarketMaker( object ):
                 if n < 2:
                     done = True
                 sleep(1)
-            self.client.cancelall()
         
                 
 
