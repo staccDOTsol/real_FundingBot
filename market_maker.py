@@ -1064,7 +1064,7 @@ class MarketMaker( object ):
             q.join()
             old = 0
             done = False
-            while done = False
+            while done == False
                 n = threading.active_count() > 2:
                 if n != old:
                     old = n 
