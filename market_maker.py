@@ -1040,7 +1040,7 @@ class MarketMaker( object ):
             sleep(0.01)
             size = int (100)
         
-            q = Queue.Queue(maxsize = 6)
+            q = Queue(maxsize = 6)
             arr = []
             for ex in self.totrade:
                 for fut in self.futures[ex]:
@@ -1053,8 +1053,9 @@ class MarketMaker( object ):
                 t.start()
             q.join()
             while q.qsize > 3:
-                sleep(0.5)
-
+                print('q size ' + str(q.qsize))
+                sleep(5)
+                
 
             #self.place_orders(ex, fut)
             #print('out of sleep!')
