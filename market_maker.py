@@ -663,7 +663,49 @@ class MarketMaker( object ):
         token = 'BTC'
         if 'ETH' in fut:
             token = 'ETH'
-    # Long
+    
+    # Reduce
+    
+    for fut in self.positions:
+        
+        if self.positions[fut]['floatingPl'] > 0:
+            print(fut + ' in profit! Gonna reduce!')
+            
+    
+    # short Reduce
+            
+            if self.positions[fut]['size'] > 0:
+                if 'PERPETUAL' in fut:
+                # deribit
+                    self.client.sell( fut, qty, self.get_bbo(ex, fut)['ask'], 'true' )
+                if 'XBT' in fut or fut == 'ETHUSD':
+                # mex
+                    self.mex.Order.Order_new(symbol=fut, orderQty=-1 * qty, price=self.get_bbo('bitmex', fut)['ask'],execInst="ParticipateDoNotInitiate").result()
+     
+                if 'bybit' in fut or 'BTCUSD' == fut:
+                # bybit
+                    if 'bybit' in fut:
+                        fut = 'ETHUSD'
+                    self.bit.Order.Order_new(side="Sell",symbol=fut,order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['ask'],time_in_force="PostOnly").result()
+                  
+                
+    # long reduce
+    
+            else:
+                if 'PERPETUAL' in fut:
+                # deribit
+                    self.client.buy( fut, qty, self.get_bbo(ex, fut)['bid'], 'true' )
+                if 'XBT' in fut or fut == 'ETHUSD':
+                # mex
+                    self.mex.Order.Order_new(symbol=fut, orderQty=qty, price=self.get_bbo('bitmex', fut)['bid'],execInst="ParticipateDoNotInitiate").result()
+     
+                if 'bybit' in fut or 'BTCUSD' == fut:
+                # bybit
+                    if 'bybit' in fut:
+                        fut = 'ETHUSD'
+                    self.bit.Order.Order_new(side="Buy",symbol=fut,order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['bid'],time_in_force="PostOnly").result()
+                  
+    # Long add on winning ex, short other ex
         
         if self.arbmult[token]['long'] == ex and place_bids: # 
             print('Ok! ' + ex + ' wins! They can long!')
@@ -741,7 +783,7 @@ class MarketMaker( object ):
             token = 'ETH'
 
 
-        # Short
+        # add short on winning ex, short other ex
         if self.arbmult[token]['short'] == ex and place_asks: # Ok! You win! You can short!
             print('Ok! ' + ex + ' wins! They can short!')
             
@@ -1016,6 +1058,7 @@ class MarketMaker( object ):
                 positions       = self.client.positions()
                 
                 for pos in positions:
+
                     if pos[ 'instrument' ] in self.futures['deribit']:
                         if 'ETH' in pos[ 'instrument' ]:
                             pos['sizeBtc'] = pos['sizeEth']
