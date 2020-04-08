@@ -1047,7 +1047,7 @@ class MarketMaker( object ):
                
                     arr.append({fut: fut, ex: ex})
             
-            for i in range(6):
+            for i in range(5):
                 
                 t = threading.Thread(target=self.place_orders, args=(arr[i]['ex'],arr[i]['fut'],))
                 t.start()
