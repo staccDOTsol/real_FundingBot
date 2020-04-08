@@ -1,5 +1,4 @@
 # This code is for sample purposes only, comes as is and with no warranty or guarantee of performance
-import threading
 from bitmex_websocket import BitMEXWebsocket
 import linecache
 import sys
@@ -13,18 +12,6 @@ def PrintException():
     line = linecache.getline(filename, lineno, f.f_globals)
     print ('EXCEPTION IN ({}, LINE {} "{}"): {}'.format(filename, lineno, line.strip(), exc_obj))
 
-
-from queue import Queue
-
-print_lock = threading.Lock()
-
-def threader():
-    while True:
-        # get the job from the front of the queue
-        threadTest(q.get())
-        q.task_done()
-
-    q = Queue()
 
 from collections    import OrderedDict
 from datetime       import datetime
@@ -922,24 +909,9 @@ class MarketMaker( object ):
             sleep(0.01)
             size = int (100)
         
-            
-            for ex in self.totrade:
-                for fut in self.futures[ex]:
-                    if fut in self.futures[ex]:
-                        t = threading.Thread(target = self.place_orders, args = (ex,fut,))
-                        # this ensures the thread will die when the main thread dies
-                        # can set t.daemon to False if you want it to keep running
-                        t.daemon = True
-                        t.start()
-            gogo = True
-            while gogo == True:
-                count = threading.active_count()
-                if count < 4:
-                    gogo = False
-                    break
+           
 
-
-            #self.place_orders()
+            self.place_orders()
             #print('out of sleep!')
             #self.place_orders()
 
