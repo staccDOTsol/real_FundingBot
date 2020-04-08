@@ -4,7 +4,7 @@ import linecache
 import sys
 import threading
 import time
-import Queue
+from queue import Queue
 
 def PrintException():
     exc_type, exc_obj, tb = sys.exc_info()
