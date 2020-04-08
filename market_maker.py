@@ -1062,8 +1062,17 @@ class MarketMaker( object ):
                         t = threading.Thread(target=self.place_orders, args=(arr[i]['ex'],arr[i]['fut'],))
                         t.start()
             q.join()
-            while threading.active_count() > 2:
-                print('t active count ' + str(threading.active_count()))
+            old = 0
+            done = False
+            while 
+                n = threading.active_count() > 2:
+                if n != old:
+                    old = n 
+                else:
+                    done = True
+                print('t active count ' + str(n))
+                if n < 2:
+                    done = True
                 sleep(1)
             self.client.cancelall()
         
