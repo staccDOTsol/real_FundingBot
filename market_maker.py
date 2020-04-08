@@ -656,12 +656,7 @@ class MarketMaker( object ):
         except:
             abc=123#PrintException()
         
-        self.client.cancelall()
         
-        self.mex.Order.Order_cancelAll(symbol='ETHUSD').result()
-        self.bit.Order.Order_cancelAll(symbol='BTCUSD').result()
-        self.mex.Order.Order_cancelAll(symbol='XBTUSD').result()
-        self.bit.Order.Order_cancelAll(symbol='ETHUSD').result()
             
         
         self.execute_longs ( qty, ex, fut, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
@@ -1066,6 +1061,12 @@ class MarketMaker( object ):
             while threading.active_count() > 3:
                 print('t active count ' + str(threading.active_count()))
                 sleep(1)
+            self.client.cancelall()
+        
+            self.mex.Order.Order_cancelAll(symbol='ETHUSD').result()
+            self.bit.Order.Order_cancelAll(symbol='BTCUSD').result()
+            self.mex.Order.Order_cancelAll(symbol='XBTUSD').result()
+            self.bit.Order.Order_cancelAll(symbol='ETHUSD').result()
                 
 
             #self.place_orders(ex, fut)
