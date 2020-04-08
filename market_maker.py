@@ -2,6 +2,9 @@
 from bitmex_websocket import BitMEXWebsocket
 import linecache
 import sys
+import threading
+import time
+import Queue
 
 def PrintException():
     exc_type, exc_obj, tb = sys.exc_info()
@@ -1037,10 +1040,23 @@ class MarketMaker( object ):
             sleep(0.01)
             size = int (100)
         
-           
+            q = Queue.Queue(maxsize = 6)
+            arr = []
             for ex in self.totrade:
                 for fut in self.futures[ex]:
-                    self.place_orders(ex, fut)
+               
+                    arr.append({fut: fut, ex: ex})
+            
+            for i in range(6):
+                
+                t = threading.Thread(target=consume, args=(arr[i]['ex'],arr[i]['fut'],))
+                t.start()
+            q.join()
+            while q.qsize > 3:
+                sleep(0.5)
+
+
+            #self.place_orders(ex, fut)
             #print('out of sleep!')
             #self.place_orders()
 
