@@ -1065,7 +1065,7 @@ class MarketMaker( object ):
             q.join()
             while threading.active_count() > 3:
                 print('t active count ' + str(threading.active_count()))
-                sleep(5)
+                sleep(1)
                 
 
             #self.place_orders(ex, fut)
