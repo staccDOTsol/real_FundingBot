@@ -30,6 +30,8 @@ import json
 import copy as cp
 import argparse, logging, math, os, pathlib, sys, time, traceback
 import ccxt
+import random
+
 try:
     from deribit_api    import RestClient
 except ImportError:
@@ -1045,12 +1047,21 @@ class MarketMaker( object ):
             for ex in self.totrade:
                 for fut in self.futures[ex]:
                
-                    arr.append({fut: fut, ex: ex})
-            
-            for i in range(5):
+                    arr.append({"fut": fut, "ex": ex})
                 
-                t = threading.Thread(target=self.place_orders, args=(arr[i]['ex'],arr[i]['fut'],))
-                t.start()
+            taken = []
+            for i in range(6):
+                print(i)
+                done = False
+                while done == False:
+                    number = random.randint(0,5)
+                    if number not in taken:
+                        sleep(2.5)
+                        taken.append(number)
+                        print(arr[number])
+                        done = True
+                        t = threading.Thread(target=self.place_orders, args=(arr[i]['ex'],arr[i]['fut'],))
+                        t.start()
             q.join()
             while q.qsize > 3:
                 print('q size ' + str(q.qsize))
@@ -1099,6 +1110,7 @@ class MarketMaker( object ):
         self.logger = get_logger( 'root', LOG_LEVEL )
         # Get all futures contracts
         self.get_futures()
+        
         self.update_balances()
         self.update_positions()
         self.update_rates()
