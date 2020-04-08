@@ -740,7 +740,7 @@ class MarketMaker( object ):
                     if token in fut and qty + skew_size < self.MAX_SKEW:
                         if 'ETH' in fut:
                             fut = 'ETHUSD'
-                         self.bit.Order.Order_new(side="Buy",symbol=fut,order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['bid'],time_in_force="PostOnly").result()
+                        self.bit.Order.Order_new(side="Buy",symbol=fut,order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['bid'],time_in_force="PostOnly").result()
                 if token == 'BTC':
                     fut = 'XBTUSD'
                 else:
