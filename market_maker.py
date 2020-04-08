@@ -187,7 +187,7 @@ class MarketMaker( object ):
             res = requests.get("https://www.deribit.com/api/v2/public/get_funding_rate_value?instrument_name=BTC-PERPETUAL&start_timestamp=" + str(int(time.time() * 1000 - (60 * 60 * 8))) + "&end_timestamp=" + str(int(time.time() * 1000))).json()['result']
 
             self.exchangeRates['BTC']['deribit'] = res * 3
-
+    
             res = requests.get("https://www.deribit.com/api/v2/public/get_funding_rate_value?instrument_name=ETH-PERPETUAL&start_timestamp=" + str(int(time.time() * 1000 - (60 * 60 * 8))) + "&end_timestamp=" + str(int(time.time() * 1000))).json()['result']
 
             self.exchangeRates['ETH']['deribit'] = res * 3
@@ -213,11 +213,11 @@ class MarketMaker( object ):
             PrintException() # PrintException()
         try:
             
-            res = self.bit.Funding.Funding_predicted(symbol="BTCUSD").result()
+            res = self.bit.Funding.Funding_get(symbol="BTCUSD").result()
             res = res[0]['result']['predicted_funding_rate'] * 3
 
             self.exchangeRates['BTC']['bybit'] = res
-            res = self.bit.Funding.Funding_predicted(symbol="ETHUSD").result()
+            res = self.bit.Funding.Funding_get(symbol="ETHUSD").result()
             res = res[0]['result']['predicted_funding_rate'] * 3
 
             self.exchangeRates['ETH']['bybit'] = res
@@ -1030,29 +1030,27 @@ class MarketMaker( object ):
                         self.positions[ pos[ 'instrument' ]] = pos
             if ex == 'bybit':
                 try:
-                    positions = self.bit.Positions.Positions_myPosition().result()
-                    print(positions)
-                    for positionpos in positions:
-                        
-                        for pos in positionpos['result']:
-                            if pos[ 'symbol' ] in self.futures['bybit'] or pos['symbol'] == 'ETHUSD':
-                                name = pos [ 'symbol' ] 
-                                if 'ETH' in name:
-                                     name = "ETHUSD-bybit"
-                                print(name)
-                                print(name)
-                                print(name)
-                                size = pos['size']
-                                home = pos['position_value']
-                                if pos['side'] ==  'Sell':
-                                    size = size * - 1
-                                    home = home * -1
-                                self.positions[name] = {
-                                    'size':         size,
-                                    'sizeBtc':      home,
-                                    'averagePrice': pos['entry_price'],
-                                    'floatingPl': pos['unrealised_pnl']}
-                                print(self.positions[name])
+                    positions = self.bit.Positions.Positions_myPosition().result()[0]['result']
+                    
+                    for pos in position:
+                        if pos[ 'symbol' ] in self.futures['bybit'] or pos['symbol'] == 'ETHUSD':
+                            name = pos [ 'symbol' ] 
+                            if 'ETH' in name:
+                                 name = "ETHUSD-bybit"
+                            print(name)
+                            print(name)
+                            print(name)
+                            size = pos['size']
+                            home = pos['position_value']
+                            if pos['side'] ==  'Sell':
+                                size = size * - 1
+                                home = home * -1
+                            self.positions[name] = {
+                                'size':         size,
+                                'sizeBtc':      home,
+                                'averagePrice': pos['entry_price'],
+                                'floatingPl': pos['unrealised_pnl']}
+                            print(self.positions[name])
                 except:
                     PrintException()
             if ex == 'bitmex':
