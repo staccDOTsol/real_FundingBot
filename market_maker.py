@@ -1065,7 +1065,7 @@ class MarketMaker( object ):
             old = 0
             done = False
             while done == False:
-                n = threading.active_count() > 2:
+                n = threading.active_count() > 2
                 if n != old:
                     old = n 
                 else:
