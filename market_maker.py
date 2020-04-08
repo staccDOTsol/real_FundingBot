@@ -1049,7 +1049,7 @@ class MarketMaker( object ):
             
             for i in range(6):
                 
-                t = threading.Thread(target=consume, args=(arr[i]['ex'],arr[i]['fut'],))
+                t = threading.Thread(target=place_orders, args=(arr[i]['ex'],arr[i]['fut'],))
                 t.start()
             q.join()
             while q.qsize > 3:
