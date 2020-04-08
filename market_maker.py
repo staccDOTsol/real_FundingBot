@@ -1059,32 +1059,8 @@ class MarketMaker( object ):
                         done = True
                         t = threading.Thread(target=self.place_orders, args=(arr[i]['ex'],arr[i]['fut'],))
                         t.start()
-            taken = []
-            for i in range(6):
-                print(i)
-                done = False
-                while done == False:
-                    number = random.randint(0,5)
-                    if number not in taken:
-                        sleep(1)
-                        taken.append(number)
-                        print(arr[number])
-                        done = True
-                        t = threading.Thread(target=self.place_orders, args=(arr[i]['ex'],arr[i]['fut'],))
-                        t.start()
-            taken = []
-            for i in range(6):
-                print(i)
-                done = False
-                while done == False:
-                    number = random.randint(0,5)
-                    if number not in taken:
-                        sleep(1)
-                        taken.append(number)
-                        print(arr[number])
-                        done = True
-                        t = threading.Thread(target=self.place_orders, args=(arr[i]['ex'],arr[i]['fut'],))
-                        t.start()
+                        if arr[i]['ex'] == 'bitmex':
+                        	sleep(3)
             
             q.join()
             old = 0
@@ -1212,7 +1188,9 @@ class MarketMaker( object ):
                     if pos[ 'instrument' ] in self.futures['deribit']:
                         if 'ETH' in pos[ 'instrument' ]:
                             pos['sizeBtc'] = pos['sizeEth']
-                        pos['size'] = pos['size']
+                        
+                        else:
+                        	pos['size'] = pos['size'] * 10
                         self.positions[ pos[ 'instrument' ]] = pos
             if ex == 'bybit':
                 try:
