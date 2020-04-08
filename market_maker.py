@@ -648,7 +648,8 @@ class MarketMaker( object ):
         
         self.client.cancelall()
         self.mex.Order.Order_cancelAll().result()
-        self.bit.Order.Order_cancelAll().result()
+        self.bit.Order.Order_cancelAll(symbol='XBTUSD').result()
+        self.bit.Order.Order_cancelAll(symbol='ETHUSD').result()
             
         
         self.execute_longs ( qty, ex, fut, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
@@ -858,9 +859,12 @@ class MarketMaker( object ):
         try:
             strMsg = 'RESTARTING'
             print( strMsg )
+            
             self.client.cancelall()
             self.mex.Order.Order_cancelAll().result()
-            self.bit.Order.cancelAll().result()
+            self.bit.Order.Order_cancelAll(symbol='XBTUSD').result()
+            self.bit.Order.Order_cancelAll(symbol='ETHUSD').result()
+                
             strMsg += ' '
             for i in range( 0, 5 ):
                 strMsg += '.'
@@ -949,7 +953,12 @@ class MarketMaker( object ):
     def run_first( self ):
         
         self.create_client()
+        
         self.client.cancelall()
+        self.mex.Order.Order_cancelAll().result()
+        self.bit.Order.Order_cancelAll(symbol='XBTUSD').result()
+        self.bit.Order.Order_cancelAll(symbol='ETHUSD').result()
+            
         self.logger = get_logger( 'root', LOG_LEVEL )
         # Get all futures contracts
         self.get_futures()
@@ -1097,8 +1106,9 @@ if __name__ == '__main__':
         #print( "Cancelling open orders" )
         mmbot.client.cancelall()
     
-        mmbot.mex.Order.Order_cancelAll().result()
-        mmbot.bit.Order.cancelAll().result()
+        mmbot.mex.Order.Order_cancelAll(symbol='XBTUSD').result()
+        mmbot.mex.Order.Order_cancelAll(symbol='ETHUSD').result()
+        mmbot.bit.Order.Order_cancelAll().result()
         sys.exit()
     except:
         print( traceback.format_exc())
