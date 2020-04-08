@@ -910,8 +910,9 @@ class MarketMaker( object ):
             size = int (100)
         
            
-
-            self.place_orders()
+            for ex in self.totrade:
+                for fut in self.futures[ex]:
+                    self.place_orders(ex, fut)
             #print('out of sleep!')
             #self.place_orders()
 
