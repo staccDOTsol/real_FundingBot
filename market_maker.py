@@ -730,7 +730,7 @@ class MarketMaker( object ):
                          r = self.bit.Order.Order_new(side="Sell",symbol=fut,order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['ask'],time_in_force="PostOnly").result()
                          print(r) 
                          if afut != "":
-                            if math.fabs(self.positions[fut][size]) > 1.33 * math.fabs(self.positions[afut]):
+                            if math.fabs(self.positions[fut]['size']) > 1.33 * math.fabs(self.positions[afut]):
                                 print('reduced at a profit too much! We must now lose!')
                                 r = self.bit.Order.Order_new(side="Buy",symbol=fut,order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['bid'],time_in_force="PostOnly").result()
                          
@@ -741,7 +741,7 @@ class MarketMaker( object ):
                 if qty + skew_size[token] * -1 <  self.MAX_SKEW:
                     self.mex.Order.Order_new(symbol=fut, orderQty=-1 * qty, price=self.get_bbo('bitmex', fut)['ask'],execInst="ParticipateDoNotInitiate").result()
                     if afut != "":
-                        if math.fabs(self.positions[fut][size]) > 1.33 * math.fabs(self.positions[afut]):
+                        if math.fabs(self.positions[fut]['size']) > 1.33 * math.fabs(self.positions[afut]):
                             print('reduced at a profit too much! We must now lose!')
                             self.mex.Order.Order_new(symbol=fut, orderQty=qty, price=self.get_bbo('bitmex', fut)['bid'],execInst="ParticipateDoNotInitiate").result()
                     
@@ -761,7 +761,7 @@ class MarketMaker( object ):
                         
                         self.client.sell( fut, qty, self.get_bbo('deribit', fut)['ask'], 'true' )
                         if afut != "":
-                            if math.fabs(self.positions[fut][size]) > 1.33 * math.fabs(self.positions[afut]):
+                            if math.fabs(self.positions[fut]['size']) > 1.33 * math.fabs(self.positions[afut]):
                                 print('reduced at a profit too much! We must now lose!')
                                 self.client.buy( fut, qty, self.get_bbo('deribit', fut)['bid'], 'true' )
                         
@@ -772,15 +772,10 @@ class MarketMaker( object ):
                 if qty + skew_size[token] * -1 <  self.MAX_SKEW:
                     self.mex.Order.Order_new(symbol=fut, orderQty=-1 * qty, price=self.get_bbo('bitmex', fut)['ask'],execInst="ParticipateDoNotInitiate").result()
                     if afut != "":
-                        if math.fabs(self.positions[fut][size]) > 1.33 * math.fabs(self.positions[afut]):
+                        if math.fabs(self.positions[fut]['size']) > 1.33 * math.fabs(self.positions[afut]):
                             print('reduced at a profit too much! We must now lose!')
                             self.mex.Order.Order_new(symbol=fut, orderQty=qty, price=self.get_bbo('bitmex', fut)['bid'],execInst="ParticipateDoNotInitiate").result()
-                            if afut != "":
-                                if math.fabs(self.positions[fut][size]) > 1.33 * math.fabs(self.positions[afut]):
-                                    print('reduced at a profit too much! We must now lose!')
-                                    self.mex.Order.Order_new(symbol=fut, orderQty=-1*qty, price=self.get_bbo('bitmex', fut)['ask'],execInst="ParticipateDoNotInitiate").result()
                             
-
 
 
 
@@ -798,7 +793,7 @@ class MarketMaker( object ):
                     print('less maxskew mex')
                     self.mex.Order.Order_new(symbol=fut, orderQty=qty, price=self.get_bbo(ex, fut)['bid'],execInst="ParticipateDoNotInitiate").result()
                     if afut != "":
-                        if math.fabs(self.positions[fut][size]) > 1.33 * math.fabs(self.positions[afut]):
+                        if math.fabs(self.positions[fut]['size']) > 1.33 * math.fabs(self.positions[afut]):
                             print('reduced at a profit too much! We must now lose!')
                             self.mex.Order.Order_new(symbol=fut, orderQty=-1*qty, price=self.get_bbo(ex, fut)['ask'],execInst="ParticipateDoNotInitiate").result()
                     
@@ -816,7 +811,7 @@ class MarketMaker( object ):
                         r = self.bit.Order.Order_new(side="Sell",symbol=fut,order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['ask'],time_in_force="PostOnly").result()
                         print(r)
                         if afut != "":
-                            if math.fabs(self.positions[fut][size]) > 1.33 * math.fabs(self.positions[afut]):
+                            if math.fabs(self.positions[fut]['size']) > 1.33 * math.fabs(self.positions[afut]):
                                 print('reduced at a profit too much! We must now lose!')
                                 r = self.bit.Order.Order_new(side="Buy",symbol=fut,order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['bid'],time_in_force="PostOnly").result()
                     
@@ -849,7 +844,7 @@ class MarketMaker( object ):
                         if afut != "":
                             if 'bybit' in fut:
                                 fut = "ETHUSD"
-                            if math.fabs(self.positions[fut][size]) > 1.33 * math.fabs(self.positions[afut]):
+                            if math.fabs(self.positions[fut]['size']) > 1.33 * math.fabs(self.positions[afut]):
                                 print('reduced at a profit too much! We must now lose!')
                                 r = self.bit.Order.Order_new(side="Sell",symbol=fut,order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['ask'],time_in_force="PostOnly").result()
                     
@@ -861,7 +856,7 @@ class MarketMaker( object ):
                 if qty + skew_size[token] < self.MAX_SKEW:
                     self.mex.Order.Order_new(symbol=fut, orderQty=-qty, price=self.get_bbo('bitmex', fut)['bid'],execInst="ParticipateDoNotInitiate").result()
                     if afut != "":
-                        if math.fabs(self.positions[fut][size]) > 1.33 * math.fabs(self.positions[afut]):
+                        if math.fabs(self.positions[fut]['size']) > 1.33 * math.fabs(self.positions[afut]):
                             print('reduced at a profit too much! We must now lose!')
                             r = self.mex.Order.Order_new(side="Sell",symbol=fut,order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['ask'],time_in_force="PostOnly").result()
                 
@@ -880,7 +875,7 @@ class MarketMaker( object ):
                     if token in fut and qty + skew_size[token] < self.MAX_SKEW:
                         self.client.buy( fut, qty, self.get_bbo('deribit', fut)['bid'], 'true' )
                         if afut != "":
-                            if math.fabs(self.positions[fut][size]) > 1.33 * math.fabs(self.positions[afut]):
+                            if math.fabs(self.positions[fut]['size']) > 1.33 * math.fabs(self.positions[afut]):
                                 print('reduced at a profit too much! We must now lose!')
                                 self.client.sell( fut, qty, self.get_bbo('deribit', fut)['ask'], 'true' )
                         
@@ -891,7 +886,7 @@ class MarketMaker( object ):
                 if qty + skew_size[token] < self.MAX_SKEW:
                     self.mex.Order.Order_new(symbol=fut, orderQty=qty, price=self.get_bbo('bitmex', fut)['bid'],execInst="ParticipateDoNotInitiate").result()
                     if afut != "":
-                        if math.fabs(self.positions[fut][size]) > 1.33 * math.fabs(self.positions[afut]):
+                        if math.fabs(self.positions[fut]['size']) > 1.33 * math.fabs(self.positions[afut]):
                             print('reduced at a profit too much! We must now lose!')
                             self.mex.Order.Order_new(symbol=fut, orderQty=-1*qty, price=self.get_bbo('bitmex', fut)['ask'],execInst="ParticipateDoNotInitiate").result()
                     
@@ -917,7 +912,7 @@ class MarketMaker( object ):
                         print('tokenfut! ' + fut + ' deribit')
                         self.client.buy( fut, qty, self.get_bbo('deribit', fut)['bid'], 'true' )
                         if afut != "":
-                            if math.fabs(self.positions[fut][size]) > 1.33 * math.fabs(self.positions[afut]):
+                            if math.fabs(self.positions[fut]['size']) > 1.33 * math.fabs(self.positions[afut]):
                                 print('reduced at a profit too much! We must now lose!')
                                 self.client.sell( fut, qty, self.get_bbo('deribit', fut)['ask'], 'true' )
                         
@@ -933,10 +928,10 @@ class MarketMaker( object ):
                             
                             if 'bybit' in fut:
                                 fut = "ETHUSD"
-                            if math.fabs(self.positions[fut][size]) > 1.33 * math.fabs(self.positions[afut]):
+                            if math.fabs(self.positions[fut]['size']) > 1.33 * math.fabs(self.positions[afut]):
                                 print('reduced at a profit too much! We must now lose!')
                                 r = self.bit.Order.Order_new(side="Sell",symbol=fut,order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['ask'],time_in_force="PostOnly").result()
-                                
+                                    
             self.execute_cancels(ex, fut, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
         
         
