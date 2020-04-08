@@ -1063,8 +1063,8 @@ class MarketMaker( object ):
                         t = threading.Thread(target=self.place_orders, args=(arr[i]['ex'],arr[i]['fut'],))
                         t.start()
             q.join()
-            while q.qsize() > 3:
-                print('q size ' + str(q.qsize))
+            while threading.active_count() > 3:
+                print('t active count ' + str(threading.active_count()))
                 sleep(5)
                 
 
