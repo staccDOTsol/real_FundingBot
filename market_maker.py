@@ -213,12 +213,12 @@ class MarketMaker( object ):
             PrintException() # PrintException()
         try:
             
-            res = self.bit.Funding.Funding_get(symbol="BTCUSD").result()
-            res = res[0]['result']['predicted_funding_rate'] * 3
+                res = self.bit.Funding.Funding_getRate(symbol="BTCUSD").result()
+            res = res[0]['result']['funding_rate'] * 3
 
             self.exchangeRates['BTC']['bybit'] = res
-            res = self.bit.Funding.Funding_get(symbol="ETHUSD").result()
-            res = res[0]['result']['predicted_funding_rate'] * 3
+            res = self.bit.Funding.Funding_getRate(symbol="ETHUSD").result()
+            res = res[0]['result']['funding_rate'] * 3
 
             self.exchangeRates['ETH']['bybit'] = res
         except Exception as e:
@@ -433,10 +433,10 @@ class MarketMaker( object ):
             print(pos + ': ' + str( self.positions[pos]['size']))
             
         print('\nNet delta (exposure) BTC: $' + str(t))
-        print('\nNet delta (exposure) ETH: $' + str(te))
-        print('\nTotal absolute delta (IM exposure) BTC: $' + str(a))
-        print('\nTotal absolute delta (IM exposure) ETH: $' + str(ae))
-        print('\nTotal absolute delta (IM exposure) combined: $' + str(ae + a))
+        print('Net delta (exposure) ETH: $' + str(te))
+        print('Total absolute delta (IM exposure) BTC: $' + str(a))
+        print('Total absolute delta (IM exposure) ETH: $' + str(ae))
+        print('Total absolute delta (IM exposure) combined: $' + str(ae + a))
         self.IM = (0.01 + (((a+ae)/self.equity_usd) *0.005))*100
         self.IM = round(self.IM * 1000)/1000
         self.LEV = (a+ae) / self.equity_usd
@@ -481,7 +481,9 @@ class MarketMaker( object ):
         #print('yo place orders ' + ex + ': ' + fut)
         
         spot            = self.get_spot(fut)
-        skew_size[token] = 0
+        skew_size = {}
+        skew_size['BTC'] = 0
+        skew_size['ETH'] = 0
         #print('skew_size[token]: ' + str(skew_size[token]))
         nbids = 1
         nasks = 1
@@ -660,8 +662,10 @@ class MarketMaker( object ):
             abc=123#PrintException()
         
         self.client.cancelall()
-        self.mex.Order.Order_cancelAll().result()
-        self.bit.Order.Order_cancelAll(symbol='XBTUSD').result()
+        
+        self.mex.Order.Order_cancelAll(symbol='ETHUSD').result()
+        self.bit.Order.Order_cancelAll(symbol='BTCUSD').result()
+        self.mex.Order.Order_cancelAll(symbol='XBTUSD').result()
         self.bit.Order.Order_cancelAll(symbol='ETHUSD').result()
             
         
@@ -874,8 +878,9 @@ class MarketMaker( object ):
             print( strMsg )
             
             self.client.cancelall()
-            self.mex.Order.Order_cancelAll().result()
-            self.bit.Order.Order_cancelAll(symbol='XBTUSD').result()
+            self.mex.Order.Order_cancelAll(symbol='ETHUSD').result()
+            self.bit.Order.Order_cancelAll(symbol='BTCUSD').result()
+            self.mex.Order.Order_cancelAll(symbol='XBTUSD').result()
             self.bit.Order.Order_cancelAll(symbol='ETHUSD').result()
                 
             strMsg += ' '
@@ -968,8 +973,9 @@ class MarketMaker( object ):
         self.create_client()
         
         self.client.cancelall()
-        self.mex.Order.Order_cancelAll().result()
-        self.bit.Order.Order_cancelAll(symbol='XBTUSD').result()
+        self.mex.Order.Order_cancelAll(symbol='ETHUSD').result()
+        self.bit.Order.Order_cancelAll(symbol='BTCUSD').result()
+        self.mex.Order.Order_cancelAll(symbol='XBTUSD').result()
         self.bit.Order.Order_cancelAll(symbol='ETHUSD').result()
             
         self.logger = get_logger( 'root', LOG_LEVEL )
@@ -1050,6 +1056,7 @@ class MarketMaker( object ):
                         if pos[ 'symbol' ] in self.futures['bybit'] or pos['symbol'] == 'ETHUSD':
                             name = pos [ 'symbol' ] 
                             if 'ETH' in name:
+                                 print(pos)
                                  name = "ETHUSD-bybit"
                             size = pos['size']
                             home = pos['position_value']
@@ -1061,6 +1068,8 @@ class MarketMaker( object ):
                                 'sizeBtc':      home,
                                 'averagePrice': pos['entry_price'],
                                 'floatingPl': pos['unrealised_pnl']}
+                            print(name)
+                            print(name)
                             print(self.positions[name])
                 except:
                     PrintException()
@@ -1118,7 +1127,9 @@ if __name__ == '__main__':
     
         mmbot.mex.Order.Order_cancelAll(symbol='XBTUSD').result()
         mmbot.mex.Order.Order_cancelAll(symbol='ETHUSD').result()
-        mmbot.bit.Order.Order_cancelAll().result()
+        mmbot.bit.Order.Order_cancelAll(symbol='ETHUSD').result()
+        mmbot.bit.Order.Order_cancelAll(symbol='BTCUSD').result()
+        
         sys.exit()
     except:
         print( traceback.format_exc())
