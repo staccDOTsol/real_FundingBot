@@ -677,7 +677,7 @@ class MarketMaker( object ):
                 if self.positions[fut]['size'] > 0:
                     if 'PERPETUAL' in fut:
                     # deribit
-                        self.client.sell( fut, qty, self.get_bbo(ex, fut)['ask'], 'true' )
+                        self.client.sell( fut, qty, self.get_bbo('deribit', fut)['ask'], 'true' )
                     if 'XBT' in fut or fut == 'ETHUSD':
                     # mex
                         self.mex.Order.Order_new(symbol=fut, orderQty=-1 * qty, price=self.get_bbo('bitmex', fut)['ask'],execInst="ParticipateDoNotInitiate").result()
@@ -694,7 +694,7 @@ class MarketMaker( object ):
                 else:
                     if 'PERPETUAL' in fut:
                     # deribit
-                        self.client.buy( fut, qty, self.get_bbo(ex, fut)['bid'], 'true' )
+                        self.client.buy( fut, qty, self.get_bbo('deribit', fut)['bid'], 'true' )
                     if 'XBT' in fut or fut == 'ETHUSD':
                     # mex
                         self.mex.Order.Order_new(symbol=fut, orderQty=qty, price=self.get_bbo('bitmex', fut)['bid'],execInst="ParticipateDoNotInitiate").result()
