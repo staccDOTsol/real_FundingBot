@@ -1061,11 +1061,36 @@ class MarketMaker( object ):
                         done = True
                         t = threading.Thread(target=self.place_orders, args=(arr[i]['ex'],arr[i]['fut'],))
                         t.start()
+            for i in range(6):
+                print(i)
+                done = False
+                while done == False:
+                    number = random.randint(0,5)
+                    if number not in taken:
+                        sleep(1)
+                        taken.append(number)
+                        print(arr[number])
+                        done = True
+                        t = threading.Thread(target=self.place_orders, args=(arr[i]['ex'],arr[i]['fut'],))
+                        t.start()
+            for i in range(6):
+                print(i)
+                done = False
+                while done == False:
+                    number = random.randint(0,5)
+                    if number not in taken:
+                        sleep(1)
+                        taken.append(number)
+                        print(arr[number])
+                        done = True
+                        t = threading.Thread(target=self.place_orders, args=(arr[i]['ex'],arr[i]['fut'],))
+                        t.start()
+            
             q.join()
             old = 0
             done = False
             while done == False:
-                n = threading.active_count() > 2
+                n = threading.active_count() > 9
                 if n != old:
                     old = n 
                 else:
