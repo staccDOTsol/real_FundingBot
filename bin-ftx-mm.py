@@ -410,6 +410,7 @@ class MarketMaker( object ):
             #print('yo place orders ' + ex + ': ' + token)
             
             spot            = self.get_spot(token)
+            skew_size = {}
             skew_size[token] = 0
             #print('skew_size[token]: ' + str(skew_size[token]))
             nbids = 1
