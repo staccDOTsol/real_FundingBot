@@ -496,10 +496,10 @@ class MarketMaker( object ):
             #print(fut)
 
             #print(self.place_asks[token])
-            self.execute_arb (token, ex, token, skew_size, nbids, nasks, self.place_bids[token], self.place_asks[token], bids, asks, bid_ords, ask_ords, qtybtc, con_sz, cancel_oids, len_bid_ords, len_ask_ords )    
+            self.execute_arb (token, ex, token, skew_size, nbids, nasks,  bids, asks, bid_ords, ask_ords, qtybtc, con_sz, cancel_oids, len_bid_ords, len_ask_ords )    
 
 
-    def execute_arb ( self, token, ex, fut, skew_size,  nbids, nasks, self.place_bids[token], self.place_asks[token], bids, asks, bid_ords, ask_ords, qtybtc, con_sz, cancel_oids, len_bid_ords, len_ask_ords):
+    def execute_arb ( self, token, ex, fut, skew_size,  nbids, nasks,  bids, asks, bid_ords, ask_ords, qtybtc, con_sz, cancel_oids, len_bid_ords, len_ask_ords):
         skew_size = skew_size + self.positions[fut]['size']
         #print('skew_size: ' + str(skew_size))
         i = 0
@@ -555,10 +555,10 @@ class MarketMaker( object ):
         
             
         
-        self.execute_longs ( token, qty, ex, fut, skew_size,  nbids, nasks, self.place_bids[token], self.place_asks[token], bids, asks, bid_ords, ask_ords, qtybtc, con_sz, cancel_oids, len_bid_ords, len_ask_ords)
-        self.execute_shorts ( token, qty, ex, fut, skew_size,  nbids, nasks, self.place_bids[token], self.place_asks[token], bids, asks, bid_ords, ask_ords, qtybtc, con_sz, cancel_oids, len_bid_ords, len_ask_ords)
+        self.execute_longs ( token, qty, ex, fut, skew_size,  nbids, nasks,  bids, asks, bid_ords, ask_ords, qtybtc, con_sz, cancel_oids, len_bid_ords, len_ask_ords)
+        self.execute_shorts ( token, qty, ex, fut, skew_size,  nbids, nasks,  bids, asks, bid_ords, ask_ords, qtybtc, con_sz, cancel_oids, len_bid_ords, len_ask_ords)
 
-    def execute_longs ( self, token, qty, ex, fut, skew_size,  nbids, nasks, self.place_bids[token], self.place_asks[token], bids, asks, bid_ords, ask_ords, qtybtc, con_sz, cancel_oids, len_bid_ords, len_ask_ords):
+    def execute_longs ( self, token, qty, ex, fut, skew_size,  nbids, nasks,  bids, asks, bid_ords, ask_ords, qtybtc, con_sz, cancel_oids, len_bid_ords, len_ask_ords):
         
     # Reduce
 
@@ -639,10 +639,10 @@ class MarketMaker( object ):
                                 self.binance.createOrder(  fut + '/USDT', "Limit", 'buy', qty, self.get_bbo('binance', fut)['bid'], {"newClientOrderId": "x-GYswxDoF-" + self.randomword(20)})
                     
                
-            self.execute_cancels(ex, fut, skew_size,  nbids, nasks, self.place_bids[token], self.place_asks[token], bids, asks, bid_ords, ask_ords, qtybtc, con_sz, cancel_oids, len_bid_ords, len_ask_ords)
+            self.execute_cancels(ex, fut, skew_size,  nbids, nasks,  bids, asks, bid_ords, ask_ords, qtybtc, con_sz, cancel_oids, len_bid_ords, len_ask_ords)
 
 
-    def execute_shorts ( self, token, qty, ex, fut, skew_size,  nbids, nasks, self.place_bids[token], self.place_asks[token], bids, asks, bid_ords, ask_ords, qtybtc, con_sz, cancel_oids, len_bid_ords, len_ask_ords):
+    def execute_shorts ( self, token, qty, ex, fut, skew_size,  nbids, nasks,  bids, asks, bid_ords, ask_ords, qtybtc, con_sz, cancel_oids, len_bid_ords, len_ask_ords):
 
 
         # add short on winning ex, short other ex
@@ -692,7 +692,7 @@ class MarketMaker( object ):
 
 
                    
-            self.execute_cancels(ex, fut, skew_size,  nbids, nasks, self.place_bids[token], self.place_asks[token], bids, asks, bid_ords, ask_ords, qtybtc, con_sz, cancel_oids, len_bid_ords, len_ask_ords)
+            self.execute_cancels(ex, fut, skew_size,  nbids, nasks,  bids, asks, bid_ords, ask_ords, qtybtc, con_sz, cancel_oids, len_bid_ords, len_ask_ords)
         
     def cancelall(self, pair, ex ):
         if ex == 'binance':
@@ -716,7 +716,7 @@ class MarketMaker( object ):
                     self.ftx.cancelOrder( oid , pair )
                 except Exception as e:
                     print(e)
-    def execute_cancels(self, ex, fut, skew_size,  nbids, nasks, self.place_bids[token], self.place_asks[token], bids, asks, bid_ords, ask_ords, qtybtc, con_sz, cancel_oids, len_bid_ords, len_ask_ords):
+    def execute_cancels(self, ex, fut, skew_size,  nbids, nasks,  bids, asks, bid_ords, ask_ords, qtybtc, con_sz, cancel_oids, len_bid_ords, len_ask_ords):
         if ex == 'binance':
             if nbids < len( bid_ords ):
                 cancel_oids += [ o[ 'orderId' ] for o in bid_ords[ nbids : ]]
