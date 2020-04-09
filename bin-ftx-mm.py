@@ -861,7 +861,7 @@ class MarketMaker( object ):
                     ##print(pos)
                     pos['symbol'] = pos['symbol'].replace('USDT', '')
                     if pos['symbol'] in self.futures:
-                        pos['size'] = float(pos['positionAmt']) / self.spot(pos['symbol'])
+                        pos['size'] = float(pos['positionAmt']) / self.get_spot(pos['symbol'])
                         pos['floatingPl'] = float(pos['unRealizedProfit']) 
                         
                         if pos['symbol'] in self.futures:
