@@ -531,7 +531,8 @@ class MarketMaker( object ):
                 if ex == 'binance':
                     self.binance.editOrder( oid, qty, prc )
                 if ex == 'ftx':
-                    self.ftx.editOrder( oid, qty, prc )
+                    side = bid_ords[ i ][ 'side' ]
+                    self.ftx.editOrder( oid, fut, 'limit', side, qty, prc, {'leverage': 10}
             except:
                 PrintException()
         except:
@@ -551,7 +552,8 @@ class MarketMaker( object ):
                 if ex == 'binance':
                     self.binance.editOrder( oid, qty, prc )
                 if ex == 'ftx':
-                    self.ftx.editOrder( oid, qty, prc )
+                    side = ask_ords[ i ][ 'side' ]
+                    self.ftx.editOrder( oid, fut, 'limit', side, qty, prc, {'leverage': 10}
             except:
                 PrintException()
         except:
