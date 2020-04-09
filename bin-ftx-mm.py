@@ -622,7 +622,7 @@ class MarketMaker( object ):
             if ex == 'bybit':
                 afut = ""
                 for fut in self.futures:
-                    if token in fut and qty + skew_size < self.MAX_SKEW and self.place_bids[token] == True or (self.place_bids[token] == False and self.place_asks[token] == False and math.fabs(positions[token]['size'] > 10):
+                    if token in fut and qty + skew_size < self.MAX_SKEW and self.place_bids[token] == True or (self.place_bids[token] == False and self.place_asks[token] == False and math.fabs(positions[token]['size'] > 10)):
                         
                         afut = fut
                         
