@@ -441,7 +441,7 @@ class MarketMaker( object ):
             ##print('qty of bal: ' + str(PCT_QTY_BASE  * bal_btc))
             ##print(str(PCT_QTY_BASE  * bal_btc * spot) + '$')
             bbo     = self.get_bbo( ex, token )
-            qtybtc  = float(max( PCT_QTY_BASE  * (bal_btc / spot), min_order_size_btc / bbo['bid']))
+            qtybtc  = float(max( PCT_QTY_BASE  * (bal_btc / spot), (min_order_size_btc / bbo['bid'] / spot)))
             ##print('qtybtc: ' + str(qtybtc))
             ##print('qty $: ' + str(qtybtc * spot))
             ##print('divided: ' + str(pos_LIM_SHORT[token] / qtybtc))
