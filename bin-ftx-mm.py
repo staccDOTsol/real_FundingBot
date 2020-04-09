@@ -384,7 +384,7 @@ class MarketMaker( object ):
         #print('Total absolute delta (IM exposure) combined: $' + str(ae + a))
         self.IM = (0.01 + (((a+ae)/self.equity_usd) *0.005))
         self.IM = round(self.IM * 1000)/1000
-        self.LEV = (a+ae) / self.equity_usd / 100
+        self.LEV = self.IM / 2  
         print('Actual initial margin across all accounts: ' + str(self.IM) + '% and leverage is ' + str(round(self.LEV * 1000)/1000) + 'x')
             
         print( '' )
@@ -861,7 +861,7 @@ class MarketMaker( object ):
                     ##print(pos)
                     pos['symbol'] = pos['symbol'].replace('USDT', '')
                     if pos['symbol'] in self.futures:
-                        pos['size'] = float(pos['positionAmt']) / self.get_spot(pos['symbol'])
+                        pos['size'] = float(pos['positionAmt']) * self.get_spot(pos['symbol'])
                         pos['floatingPl'] = float(pos['unRealizedProfit']) 
                         
                         if pos['symbol'] in self.futures:
