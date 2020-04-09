@@ -630,7 +630,7 @@ class MarketMaker( object ):
                         r = self.ftx.createOrder(  fut + '-PERP', "Limit", 'buy', qty, self.get_bbo('ftx', fut)['bid'], {"newClientOrderId": "x-GYswxDoF-" + self.randomword(20)})
                         print(r)
                 for fut in self.futures:
-                    if token in fut and qty + skew_size * -1 <  self.MAX_SKEW and self.place_asks[token] == True (self.place_bids[token] == False and self.place_asks[token] == False and math.fabs(positions[token]['size'] > 10)):
+                    if token in fut and qty + skew_size * -1 <  self.MAX_SKEW and self.place_asks[token] == True or (self.place_bids[token] == False and self.place_asks[token] == False and math.fabs(positions[token]['size'] > 10)):
                         
                         self.binance.createOrder(  fut + '/USDT', "Limit", 'sell', qty, self.get_bbo('binance', fut)['ask'], {"newClientOrderId": "x-GYswxDoF-" + self.randomword(20)})
                         if afut != "":
