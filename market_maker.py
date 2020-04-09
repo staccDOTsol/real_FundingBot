@@ -117,15 +117,15 @@ class MarketMaker( object ):
         self.LEV_LIM_LONG = {}
         self.LEV_LIM_SHORT = {}
         for token in self.exchangeRates:
-            self.PCT_LIM_LONG[token]        = 16.7       # % position limit long
-            self.LEV_LIM_LONG[token] = 16.7
-            self.LEV_LIM_SHORT[token] = 16.7
-            self.PCT_LIM_SHORT[token]       = 16.7     # % position limit short
-        self.LEV_LIM_SHORT_OLD = 16.7
-        self.LEV_LIM_LONG_OLD = 16.7
-        self.PCT_LIM_LONG_OLD        = 16.7       # % position limit long
+            self.PCT_LIM_LONG[token]        = 7       # % position limit long
+            self.LEV_LIM_LONG[token] = 3
+            self.LEV_LIM_SHORT[token] = 3
+            self.PCT_LIM_SHORT[token]       = 7     # % position limit short
+        self.LEV_LIM_SHORT_OLD = 3
+        self.LEV_LIM_LONG_OLD = 3
+        self.PCT_LIM_LONG_OLD        = 7       # % position limit long
 
-        self.PCT_LIM_SHORT_OLD       = 16.7
+        self.PCT_LIM_SHORT_OLD       = 7
         self.equity_usd         = None
         self.equity_btc         = None
         self.equity_usd_init    = None
@@ -480,25 +480,25 @@ class MarketMaker( object ):
         skew_size['BTC'] = 0
         skew_size['ETH'] = 0
         #print('skew_size[token]: ' + str(skew_size[token]))
-        nbids = 1
-        nasks = 1
-        print(fut + 'im: ' + str(self.IM) + ' lim long: ' + str(self.PCT_LIM_LONG[token]) + ' lim short: ' + str(self.PCT_LIM_SHORT[token]))
-        print(fut + ' lev: ' + str(self.LEV) + ' lim long: ' + str(self.LEV_LIM_LONG[token]) + ' lim short: ' + str(self.LEV_LIM_SHORT[token]))
-        if self.IM > self.PCT_LIM_LONG[token]:
-            place_bids = False
-            nbids = 0
-        if self.IM > self.PCT_LIM_SHORT[token]:
-            place_asks = False
-            nasks = 0
-        
-        place_bids = True
-        place_asks = True
-        if self.LEV > self.LEV_LIM_LONG[token]:
-            place_bids = False
-            nbids = 0
-        if self.LEV > self.LEV_LIM_SHORT[token]:
-            place_asks = False
-            nasks = 0
+            nbids = 1
+            nasks = 1
+            
+            place_bids = True
+            place_asks = True
+            print(fut + 'im: ' + str(self.IM) + ' lim long: ' + str(self.PCT_LIM_LONG[token]) + ' lim short: ' + str(self.PCT_LIM_SHORT[token]))
+            print(fut + ' lev: ' + str(self.LEV) + ' lim long: ' + str(self.LEV_LIM_LONG[token]) + ' lim short: ' + str(self.LEV_LIM_SHORT[token]))
+            if self.IM > self.PCT_LIM_LONG[token]:
+                place_bids = False
+                nbids = 0
+            if self.IM > self.PCT_LIM_SHORT[token]:
+                place_asks = False
+                nasks = 0
+            if self.LEV > self.LEV_LIM_LONG[token]:
+                place_bids = False
+                nbids = 0
+            if self.LEV > self.LEV_LIM_SHORT[token]:
+                place_asks = False
+                nasks = 0
         
         min_order_size_btc = MIN_ORDER_SIZE / spot
         # 18 / (7000) 0.02571428571428571428571428571429
@@ -936,7 +936,7 @@ class MarketMaker( object ):
         
         
     def execute_cancels(self, ex, fut, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords):
-        if fut == 'deribit':
+        if ex == 'deribit':
             if nbids < len( bid_ords ):
                 cancel_oids += [ o[ 'orderId' ] for o in bid_ords[ nbids : ]]
             if nasks < len( ask_ords ):
@@ -946,7 +946,7 @@ class MarketMaker( object ):
                     self.client.cancel( oid )
                 except:
                     self.logger.warn( 'Order cancellations failed: %s' % oid )
-        if fut == 'bybit':
+        if ex == 'bybit':
             try:
                 fut =  fut.split('-')
                 
@@ -972,7 +972,7 @@ class MarketMaker( object ):
                     PrintException()
                     self.logger.warn( 'Order cancellations failed: %s' % oid )
 
-        if fut == 'bitmex':
+        if ex == 'bitmex':
             if nbids < len( bid_ords ):
                 cancel_oids += [ o[ 'orderID' ] for o in bid_ords[ nbids : ]]
             if nasks < len( ask_ords ):
@@ -1033,52 +1033,9 @@ class MarketMaker( object ):
                 t_ts = t_now
             sleep(0.01)
             size = int (100)
-        
-            q = Queue(maxsize = 6)
-            arr = []
             for ex in self.totrade:
                 for fut in self.futures[ex]:
-               
-                    arr.append({"fut": fut, "ex": ex})
-            self.client.cancelall()
-            self.mex.Order.Order_cancelAll(symbol='ETHUSD').result()
-            self.bit.Order.Order_cancelAll(symbol='BTCUSD').result()
-            self.mex.Order.Order_cancelAll(symbol='XBTUSD').result()
-            self.bit.Order.Order_cancelAll(symbol='ETHUSD').result()
-
-            taken = []
-            for i in range(6):
-                print(i)
-                done = False
-                while done == False:
-                    number = random.randint(0,5)
-                    if number not in taken:
-                        sleep(1)
-                        taken.append(number)
-                        print(arr[number])
-                        done = True
-                        t = threading.Thread(target=self.place_orders, args=(arr[i]['ex'],arr[i]['fut'],))
-                        t.start()
-                        if arr[i]['ex'] == 'bitmex':
-                        	sleep(3)
-            
-            q.join()
-            old = 0
-            done = False
-            while done == False:
-                n = threading.active_count()  
-                if n != old:
-                    old = n 
-                else:
-                    done = True
-                print('t active count ' + str(n))
-                if n < 2:
-                    done = True
-                sleep(1)
-        
-                
-
-            #self.place_orders(ex, fut)
+                    self.place_orders(ex, fut)
             #print('out of sleep!')
             #self.place_orders()
 

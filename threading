@@ -1,0 +1,46 @@
+
+            q = Queue(maxsize = 6)
+            arr = []
+            for ex in self.totrade:
+                for fut in self.futures[ex]:
+               
+                    arr.append({"fut": fut, "ex": ex})
+            self.client.cancelall()
+            self.mex.Order.Order_cancelAll(symbol='ETHUSD').result()
+            self.bit.Order.Order_cancelAll(symbol='BTCUSD').result()
+            self.mex.Order.Order_cancelAll(symbol='XBTUSD').result()
+            self.bit.Order.Order_cancelAll(symbol='ETHUSD').result()
+
+            taken = []
+            for i in range(6):
+                print(i)
+                done = False
+                while done == False:
+                    number = random.randint(0,5)
+                    if number not in taken:
+                        sleep(1)
+                        taken.append(number)
+                        print(arr[number])
+                        done = True
+                        t = threading.Thread(target=self.place_orders, args=(arr[i]['ex'],arr[i]['fut'],))
+                        t.start()
+                        if arr[i]['ex'] == 'bitmex':
+                        	sleep(3)
+            
+            q.join()
+            old = 0
+            done = False
+            while done == False:
+                n = threading.active_count()  
+                if n != old:
+                    old = n 
+                else:
+                    done = True
+                print('t active count ' + str(n))
+                if n < 2:
+                    done = True
+                sleep(1)
+        
+                
+
+            
