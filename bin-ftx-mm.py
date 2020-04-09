@@ -83,7 +83,7 @@ MIN_ORDER_SIZE      = 1
 MAX_LAYERS          =  2        # max orders to layer the ob with on each side
 MKT_IMPACT          =  0.5      # base 1-sided spread between bid/offer
 PCT                 = 100 * BP  # one percentage point
-PCT_QTY_BASE        = 75       # pct order qty in bps as pct of acct on each order
+PCT_QTY_BASE        = 5 / 20       # pct order qty in bps as pct of acct on each order
 MIN_LOOP_TIME       =   0.2       # Minimum time between loops
 SECONDS_IN_DAY      = 3600 * 24
 SECONDS_IN_YEAR     = 365 * SECONDS_IN_DAY
@@ -511,7 +511,7 @@ class MarketMaker( object ):
         print('skew_size[token]: ' + str(skew_size[token]))
         i = 0
         
-        qty = round( float(prc) / qtybtc )
+        qty = round( qtybtc )
         if qty == 0:
             qty = 1
         print('qty: ' + str(qty))
@@ -740,7 +740,7 @@ class MarketMaker( object ):
                 cancel_oids += [ o[ 'id' ] for o in ask_ords[ nasks : ]]
             for oid in cancel_oids:
                 try:
-                    self.ftx.cancel( oid )
+                    self.ftx.cancelOrder( oid, fut )
             
                 except:
                     PrintException()
