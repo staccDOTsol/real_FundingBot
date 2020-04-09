@@ -83,7 +83,7 @@ MIN_ORDER_SIZE      = 1
 MAX_LAYERS          =  2        # max orders to layer the ob with on each side
 MKT_IMPACT          =  0.5      # base 1-sided spread between bid/offer
 PCT                 = 100 * BP  # one percentage point
-PCT_QTY_BASE        = 5 / 20       # pct order qty in bps as pct of acct on each order
+PCT_QTY_BASE        = 100       # pct order qty in bps as pct of acct on each order
 MIN_LOOP_TIME       =   0.2       # Minimum time between loops
 SECONDS_IN_DAY      = 3600 * 24
 SECONDS_IN_YEAR     = 365 * SECONDS_IN_DAY
@@ -238,10 +238,10 @@ class MarketMaker( object ):
         apr = (returns * 365 * 1000) / 1000
         print('that is $' + str(annualret) + ' annualized, ' + str(roe) + '% ROE and ' + str(apr) + '% APR')
         for coin in self.arbmult:
-            self.PCT_LIM_LONG[coin]        = 7       # % position limit long
-            self.LEV_LIM_LONG[coin] = 3
-            self.LEV_LIM_SHORT[coin] = 3
-            self.PCT_LIM_SHORT[coin]       = 7     # % position limit short
+            self.PCT_LIM_LONG[coin]        = 14       # % position limit long
+            self.LEV_LIM_LONG[coin] = 7
+            self.LEV_LIM_SHORT[coin] = 7
+            self.PCT_LIM_SHORT[coin]       = 14    # % position limit short
         for token in self.arbmult:
             self.LEV_LIM_LONG[token] = self.LEV_LIM_LONG[token] * self.arbmult[token]['perc']
             self.LEV_LIM_SHORT[token] = self.LEV_LIM_SHORT[token] * self.arbmult[token]['perc']
@@ -409,7 +409,7 @@ class MarketMaker( object ):
             bal_btc         = self.bals['total']
             #print('yo place orders ' + ex + ': ' + token)
             
-            spot            = self.get_spot(token)
+            spot            = self.get_spot('BTC')
             skew_size = {}
             skew_size[token] = 0
             #print('skew_size[token]: ' + str(skew_size[token]))
@@ -436,7 +436,7 @@ class MarketMaker( object ):
             # 22 / (7000) 0.00314285714285714285714285714286
             #print('qty of bal: ' + str(PCT_QTY_BASE  * bal_btc))
             #print(str(PCT_QTY_BASE  * bal_btc * spot) + '$')
-            qtybtc  = float(max( PCT_QTY_BASE  * (spot * bal_btc), min_order_size_btc))
+            qtybtc  = float(max( PCT_QTY_BASE  * (bal_btc / spot), min_order_size_btc))
             #print('qtybtc: ' + str(qtybtc))
             #print('qty $: ' + str(qtybtc * spot))
             #print('divided: ' + str(pos_LIM_SHORT[token] / qtybtc))
@@ -453,13 +453,6 @@ class MarketMaker( object ):
             bbo     = self.get_bbo( ex, token )
             bid_mkt = bbo[ 'bid' ]
             ask_mkt = bbo[ 'ask' ]
-            
-            if bid_mkt is None and ask_mkt is None:
-                bid_mkt = ask_mkt = spot
-            elif bid_mkt is None:
-                bid_mkt = min( spot, ask_mkt )
-            elif ask_mkt is None:
-                ask_mkt = max( spot, bid_mkt )
             
             cancel_oids = []
             bid_ords = ords  = ask_ords = []
@@ -517,7 +510,7 @@ class MarketMaker( object ):
         print('qty: ' + str(qty))
         #qty = int(qty)
         self.MAX_SKEW = self.MAX_SKEW_OLD
-        self.MAX_SKEW = qty * 1.5
+        self.MAX_SKEW = qty * 3.5
         
         
 
@@ -603,7 +596,7 @@ class MarketMaker( object ):
     # Long add on winning ex, short other ex - or rather 
         
         if self.arbmult[token]['long'] == ex: # 
-            print('Ok! ' + ex + ' wins! They can long!')
+            print('Ok! ' + ex + ' wins! They can long! ' + str(self.place_bids[token]))
                     
             if ex == 'binance':
                 afut = ""
@@ -616,7 +609,7 @@ class MarketMaker( object ):
                          
                             
                          self.ftx.createOrder(  fut + '-PERP', "limit", 'sell', qty, self.get_bbo('ftx', fut)['ask'], {"newClientOrderId": "x-GYswxDoF-" + self.randomword(20)}   )
-                         print(r) 
+                          
                          if afut != "":
                             if math.fabs(self.positions[fut]['size']) >= 100 and math.fabs(self.positions[fut]['size']) > 1.33 * math.fabs(self.positions[afut]['size']):
                                 print('reduced at a profit too much! We must now lose!')
@@ -633,7 +626,7 @@ class MarketMaker( object ):
                         
                             
                         r = self.ftx.createOrder(  fut + '-PERP', "limit", 'buy', qty, self.get_bbo('ftx', fut)['bid'], {"newClientOrderId": "x-GYswxDoF-" + self.randomword(20)})
-                        print(r)
+                        
                 for fut in self.futures:
                     if token in fut and qty + skew_size[token] * -1 <  self.MAX_SKEW and self.place_asks[token] == True or (self.place_bids[token] == False and self.place_asks[token] == False and math.fabs(self.positions[token]['size'] > 10)):
                         
@@ -652,7 +645,7 @@ class MarketMaker( object ):
 
         # add short on winning ex, short other ex
         if self.arbmult[token]['short'] == ex: # Ok! You win! You can short!
-            print('Ok! ' + ex + ' wins! They can short!')
+            print('Ok! ' + ex + ' wins! They can short! '  + str(self.place_asks[token]))
             
 
             if ex == 'binance':
@@ -674,7 +667,7 @@ class MarketMaker( object ):
                                 print('reduced at a profit too much! We must now lose!')
                                 self.ftx.createOrder(  fut + '-PERP', "limit", 'sell', qty, self.get_bbo('ftx', fut)['ask'], {"newClientOrderId": "x-GYswxDoF-" + self.randomword(20)})
                     
-                        print(r)
+                        
                 
      
             if ex == 'bybit':
@@ -685,7 +678,7 @@ class MarketMaker( object ):
                         
                             
                         self.ftx.createOrder(  fut + '-PERP', "limit", 'sell', qty, self.get_bbo('ftx', fut)['ask'], {"newClientOrderId": "x-GYswxDoF-" + self.randomword(20)})
-                        print(r)
+                        
                 for fut in self.futures:
                     if token in fut and qty + skew_size[token] < self.MAX_SKEW and self.place_bids[token] == True or (self.place_bids[token] == False and self.place_asks[token] == False and math.fabs(self.positions[token]['size'] > 10)):
                         self.binance.createOrder(  fut + '/USDT', "Limit", 'buy', qty, self.get_bbo('binance', fut)['bid'], {"newClientOrderId": "x-GYswxDoF-" + self.randomword(20)})
