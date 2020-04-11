@@ -192,8 +192,8 @@ class MarketMaker( object ):
         self.PCT_LIM_SHORT = {}
         self.LEV_LIM_LONG = {}
         self.LEV_LIM_SHORT = {}
-        self.LEVERAGE_LIMIT_SHORT = 5
-        self.LEVERAGE_LIMIIT_LONG = 5
+        self.LEVERAGE_LIMIT_SHORT = 1
+        self.LEVERAGE_LIMIIT_LONG = 1
         self.INITIAL_MARGIN_LIMIT_LONG        = 10       # % position limit long
 
         self.INITIAL_MARGIN_LIMIT_SHORT       = 10
@@ -897,7 +897,46 @@ class MarketMaker( object ):
 
     
         if not place_bids and not place_asks:
-            print( 'No bid no offer for ' + fut + str( math.trunc( qtybtc ) ))
+            token = 'BTC'
+            if 'ETH' in fut:
+                token = 'ETH'
+            i = 0
+            try:
+                prc = self.get_bbo(ex, fut)['bid']
+            except Exception as e:
+                extraPrint(False, 'no bid, returning')
+                return
+            qty = round ( float(prc) * qtybtc )
+            if qty > self.maxqty:
+                self.maxqty = qty
+            
+            extraPrint(False, token + ', ' + ex + ' qty: ' + str(qty))
+            qty = round(qty)
+            if self.positions[fut]['size'] > 15:
+                print('sell over max')
+
+                if ex == 'bitmex':
+                    self.mex.Order.Order_new(symbol=fut, orderQty=-1 * qty, price=self.get_bbo('bitmex', fut)['ask'],execInst="ParticipateDoNotInitiate").result()
+     
+                if ex == 'deribit':
+                    self.client.sell( fut, qty, self.get_bbo('deribit', fut)['ask'], 'true' )
+                if ex == 'bybit':
+                    self.bit.Order.Order_new(side="Sell",symbol=fut,order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['ask'],time_in_force="PostOnly").result()
+                  
+
+            if self.positions[fut]['size'] < -15:
+                print('buy over max')
+                if ex == 'bitmex':
+                    self.mex.Order.Order_new(symbol=fut, orderQty=qty, price=self.get_bbo('bitmex', fut)['bid'],execInst="ParticipateDoNotInitiate").result()
+     
+                if ex == 'deribit':
+                    self.client.buy( fut, qty, self.get_bbo('deribit', fut)['bid'], 'true' )
+                if ex == 'bybit':
+                    self.bit.Order.Order_new(side="Buy",symbol=fut,order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['bid'],time_in_force="PostOnly").result()
+                  
+
+            
+            print( 'No bid no offer for ' + fut + " " + ex)
             return 
         extraPrint(False, 'fut: ' + fut)    
         tsz = self.get_ticksize( fut )            
@@ -1548,8 +1587,9 @@ class MarketMaker( object ):
             sleep(0.01)
             size = int (100)
             for i in range(5):
-                self.client.cancelall()
+                sleep(15)
                 print('cancel 2')
+                self.client.cancelall()
                 self.mex.Order.Order_cancelAll(symbol='ETHUSD').result()
                 self.bit.Order.Order_cancelAll(symbol='BTCUSD').result()
                 self.mex.Order.Order_cancelAll(symbol='XBTUSD').result()
