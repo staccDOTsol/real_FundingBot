@@ -343,6 +343,8 @@ class MarketMaker( object ):
         if "position" in request["method"]:
             self.positions[data['response']['result']['instrument_name']] = data['response']['result']
             doprint = False
+
+            self.positions[data['response']['result']['instrument_name']]['floatingPl'] = data['response']['result']['floating_profit_loss']
         if "account" in request["method"]:
             self.deri_bal[data["response"]['result']['currency']] = data['response']['result']['equity']
             doprint = False
@@ -376,6 +378,8 @@ class MarketMaker( object ):
             doprint = False
         if "position" in data["params"]["channel"]:
             self.positions[data['response']['result']['instrument_name']] = data['response']['result']
+            
+            self.positions[data['response']['result']['instrument_name']]['floatingPl'] = data['response']['result']['floating_profit_loss']
             doprint = False
         if "account" in data["params"]["channel"]:
             self.deri_bal[data["response"]['result']['currency']] = data['response']['result']['euuity']
@@ -1589,7 +1593,12 @@ class MarketMaker( object ):
             for a in range(6):
                 sleep(15)
                 print('cancel 2')
-                self.client.cancelall()
+                for order in self.deri_orders:
+                    oid = order['orderID']
+                    try:
+                        self.client.cancel( oid )
+                    except Exception as e:
+                        self.logger.warn( 'Order cancellations failed: %s' % oid )
                 self.mex.Order.Order_cancelAll(symbol='ETHUSD').result()
                 self.bit.Order.Order_cancelAll(symbol='BTCUSD').result()
                 self.mex.Order.Order_cancelAll(symbol='XBTUSD').result()
