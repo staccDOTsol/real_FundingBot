@@ -1630,11 +1630,7 @@ class MarketMaker( object ):
                     self.output_status(); t_out = t_now
             
             # Restart if file change detected
-            t_now   = datetime.utcnow()
-            if ( t_now - t_mtime ).total_seconds() > WAVELEN_MTIME_CHK:
-                t_mtime = t_now
-                if getmtime( __file__ ) > self.this_mtime:
-                    self.restart()
+            
            
             t_now       = datetime.utcnow()
             looptime    = ( t_now - t_loop ).total_seconds()
@@ -1660,7 +1656,7 @@ class MarketMaker( object ):
 
         
         self.client.cancelall()
-        print('cancel 2')
+        print('cancel 4')
         self.mex.Order.Order_cancelAll(symbol='ETHUSD').result()
         self.bit.Order.Order_cancelAll(symbol='BTCUSD').result()
         self.mex.Order.Order_cancelAll(symbol='XBTUSD').result()
