@@ -889,12 +889,11 @@ class MarketMaker( object ):
         #    nasks = 0
         extraPrint(False, self.LEV)
         extraPrint(False, self.LEV_LIM_LONG[token])
-        print((self.LEV / self.LEVERAGE_LIMIT_LONG )* ((self.LEV_LIM_LONG['ETH'] * 100) /self.LEVERAGE_LIMIT_LONG))
-        if (self.LEV / self.LEVERAGE_LIMIT_LONG )* ((self.LEV_LIM_LONG['ETH'] * 100) /self.LEVERAGE_LIMIT_LONG) > 100:
+        if (self.LEV / self.LEVERAGE_LIMIT_LONG )* ((self.LEV_LIM_LONG['ETH'] * 100) /self.LEVERAGE_LIMIT_LONG) > 50:
         
             place_bids = False
             nbids = 0
-        if (self.LEV / self.LEVERAGE_LIMIT_SHORT )* ((self.LEV_LIM_SHORT['ETH'] * 100) /self.LEVERAGE_LIMIT_SHORT) > 100:
+        if (self.LEV / self.LEVERAGE_LIMIT_SHORT )* ((self.LEV_LIM_SHORT['ETH'] * 100) /self.LEVERAGE_LIMIT_SHORT) > 50:
             place_asks = False
             nasks = 0
     
