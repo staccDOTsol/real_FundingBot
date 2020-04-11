@@ -192,8 +192,8 @@ class MarketMaker( object ):
         self.PCT_LIM_SHORT = {}
         self.LEV_LIM_LONG = {}
         self.LEV_LIM_SHORT = {}
-        self.LEVERAGE_LIMIT_SHORT = 1
-        self.LEVERAGE_LIMIIT_LONG = 1
+        self.LEVERAGE_LIMIT_SHORT = 5
+        self.LEVERAGE_LIMIIT_LONG = 5
         self.INITIAL_MARGIN_LIMIT_LONG        = 10       # % position limit long
 
         self.INITIAL_MARGIN_LIMIT_SHORT       = 10
