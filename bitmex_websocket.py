@@ -98,7 +98,7 @@ class BitMEXWebsocket:
         return ticker
     def send_command(self, command, args=None):
         '''Send a raw command.'''
-        print(args)
+        #print(args)
         if args is None:
             args = []
         self.ws.send(json.dumps({"op": command, "args": args}))
@@ -118,7 +118,7 @@ class BitMEXWebsocket:
     def open_orders(self):#, clOrdIDPrefix):
         '''Get all your open orders.'''
         orders = self.data['order']
-        print(orders)
+        #print(orders)
         # Filter to only open orders and those that we actually placed
         return [o for o in orders if order_leaves_quantity(o)]
 
