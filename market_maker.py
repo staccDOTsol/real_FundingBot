@@ -936,7 +936,7 @@ class MarketMaker( object ):
                     self.mex.Order.Order_new(symbol=fut, orderQty=qty, price=self.get_bbo('bitmex', fut)['bid'],execInst="ParticipateDoNotInitiate").result()
      
                 if ex == 'deribit':
-                    
+
                     if 'BTC' in fut:
                         qty = qty / 10
                     self.client.buy( fut, qty, self.get_bbo('deribit', fut)['bid'], 'true' )
@@ -1595,25 +1595,21 @@ class MarketMaker( object ):
                 t_ts = t_now
             sleep(0.01)
             size = int (100)
-            for a in range(6):
-                sleep(15)
-                print('cancel 2')
-                for order in self.deri_orders:
-                    oid = order['orderID']
-                    try:
-                        self.client.cancel( oid )
-                    except Exception as e:
-                        self.logger.warn( 'Order cancellations failed: %s' % oid )
-                self.mex.Order.Order_cancelAll(symbol='ETHUSD').result()
-                self.bit.Order.Order_cancelAll(symbol='BTCUSD').result()
-                self.mex.Order.Order_cancelAll(symbol='XBTUSD').result()
-                self.bit.Order.Order_cancelAll(symbol='ETHUSD').result()
-                        
-                for i in range(2):
+            sleep(2)
+            print('cancel 2')
+            ords        = self.deri_orders
+            for order in ords:
+                self.cancel(order['orderID'])
+            self.mex.Order.Order_cancelAll(symbol='ETHUSD').result()
+            self.bit.Order.Order_cancelAll(symbol='BTCUSD').result()
+            self.mex.Order.Order_cancelAll(symbol='XBTUSD').result()
+            self.bit.Order.Order_cancelAll(symbol='ETHUSD').result()
                     
-                    for ex in self.totrade:
-                        for token in self.exchangeRates:
-                            self.place_orders(ex, token)
+            for i in range(2):
+                
+                for ex in self.totrade:
+                    for token in self.exchangeRates:
+                        self.place_orders(ex, token)
             extraPrint(False, 'out of sleep!')
             #self.place_orders()
 
