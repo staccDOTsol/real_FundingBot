@@ -889,9 +889,10 @@ class MarketMaker( object ):
         #    nasks = 0
         extraPrint(False, self.LEV)
         extraPrint(False, self.LEV_LIM_LONG[token])
+        a = 0
+        ae = 0
         for pos in self.positions:
-            a = 0
-            ae = 0
+
             if 'ETH' in pos:
                 ae = ae + math.fabs(self.positions[pos]['size'])
             else:
@@ -1110,7 +1111,7 @@ class MarketMaker( object ):
                 skew_size['ETH'] = skew_size['ETH'] + self.positions[k]['size']
             else:
                 skew_size['BTC'] = skew_size['BTC'] + self.positions[k]['size']
-        if  place_asks== False and place_bids == False:
+        if  place_asks== False or place_bids == False:
             extraPrint(False, 'bids/asks false ' + ex + ', size: ' + str(self.positions[fut]['size'] ))
             extraPrint(False, self.arbmult[fut])
             
@@ -1620,7 +1621,7 @@ class MarketMaker( object ):
             sleep(4)
             print('cancel 2')
             ords        = self.deri_orders
-
+            print(ords)
             self.deri_orders = []
             
             for order in ords:
