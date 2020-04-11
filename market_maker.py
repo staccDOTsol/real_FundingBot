@@ -209,6 +209,8 @@ class MarketMaker( object ):
         self.IM = 1
         self.futtoks = {}
         self.ccxt = None
+        self.t = 0
+        self.oldte = 0
         self.bitOrders = []
         self.create_client()
         self.ws = {}
@@ -776,8 +778,12 @@ class MarketMaker( object ):
                 t = t + self.positions[pos]['size']
             print   (    pos + ': ' + str( self.positions[pos]['size']))
             usd = usd + self.positions[pos]['size']
-        print   (    '\nNet delta (exposure) BTC: $' + str(t))
-        print   (    'Net delta (exposure) ETH: $' + str(te))
+        self.oldt = t
+        self.oldte = te
+        diff = t - self.oldt
+        diffe = te - self.oldte
+        print   (    '\nNet delta (exposure) BTC: $' + str(t) + ', difference since last status output: ' + str(diff))
+        print   (    'Net delta (exposure) ETH: $' + str(te) + ', difference since last status output: ' + str(diffe))
         print   (    'Total absolute delta (IM exposure) BTC: $' + str(a))
         print   (    'Total absolute delta (IM exposure) ETH: $' + str(ae))
         print   (    'Total absolute delta (IM exposure) combined: $' + str(ae + a))
