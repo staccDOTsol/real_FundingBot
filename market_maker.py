@@ -913,7 +913,7 @@ class MarketMaker( object ):
             extraPrint(False, token + ', ' + ex + ' qty: ' + str(qty))
             qty = round(qty)
             if self.positions[fut]['size'] > 15:
-                print('sell over max')
+                #print('sell over max')
 
                 if ex == 'bitmex':
                     self.mex.Order.Order_new(symbol=fut, orderQty=-1 * qty, price=self.get_bbo('bitmex', fut)['ask'],execInst="ParticipateDoNotInitiate").result()
@@ -925,7 +925,7 @@ class MarketMaker( object ):
                   
 
             if self.positions[fut]['size'] < -15:
-                print('buy over max')
+                #print('buy over max')
                 if ex == 'bitmex':
                     self.mex.Order.Order_new(symbol=fut, orderQty=qty, price=self.get_bbo('bitmex', fut)['bid'],execInst="ParticipateDoNotInitiate").result()
      
@@ -936,7 +936,7 @@ class MarketMaker( object ):
                   
 
             
-            print( 'No bid no offer for ' + fut + " " + ex)
+            #print( 'No bid no offer for ' + fut + " " + ex)
             return 
         extraPrint(False, 'fut: ' + fut)    
         tsz = self.get_ticksize( fut )            
