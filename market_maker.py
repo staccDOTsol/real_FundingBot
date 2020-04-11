@@ -1569,6 +1569,7 @@ class MarketMaker( object ):
                 extraPrint(False,  strMsg )
                 sleep( 1 )
         except Exception as e:
+            print(e)
             pass
         finally:
             os.execv( sys.executable, [ sys.executable ] + sys.argv )        
@@ -1605,7 +1606,7 @@ class MarketMaker( object ):
             ords        = self.deri_orders
 
             self.deri_orders = []
-            print(ords)
+            
             for order in ords:
                 self.client.cancel(order['order_id'])
             self.mex.Order.Order_cancelAll(symbol='ETHUSD').result()
