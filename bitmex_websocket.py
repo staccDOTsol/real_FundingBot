@@ -115,11 +115,12 @@ class BitMEXWebsocket:
         '''Get market depth (orderbook). Returns all levels.'''
         return self.data['orderBookL2']
 
-    def open_orders(self, clOrdIDPrefix):
+    def open_orders(self):#, clOrdIDPrefix):
         '''Get all your open orders.'''
         orders = self.data['order']
+        print(orders)
         # Filter to only open orders and those that we actually placed
-        return [o for o in orders if str(o['clOrdID']).startswith(clOrdIDPrefix) and order_leaves_quantity(o)]
+        return [o for o in orders if order_leaves_quantity(o)]
 
     def recent_trades(self):
         '''Get recent trades.'''
