@@ -338,7 +338,8 @@ class MarketMaker( object ):
                 self.deri_index['BTC'] = request["params"]["data"]['price']
             doprint = False
         if "open_orders" in request["method"]:
-            self.deri_orders = data['response']['result']
+            for order in data['response']['result']:
+                self.deri_orders.append(data['response']['result'])
             doprint = False
         if "position" in request["method"]:
             self.positions[data['response']['result']['instrument_name']] = data['response']['result']
@@ -374,7 +375,8 @@ class MarketMaker( object ):
                 self.deri_index['BTC'] = data["params"]["data"]['price']
             doprint = False
         if "open_orders" in data["params"]["channel"]:
-            self.deri_orders = data['response']['result']
+            for order in data['response']['result']:
+                self.deri_orders.append(data['response']['result'])
             doprint = False
         if "position" in data["params"]["channel"]:
             self.positions[data['response']['result']['instrument_name']] = data['response']['result']
@@ -756,6 +758,7 @@ class MarketMaker( object ):
         
     
     def output_status( self ):
+        self.deri_orders = []
         for token in self.futtoks:
             for ex in self.futtoks[token]:
                 extraPrint(False, [token, ex])
@@ -1598,6 +1601,7 @@ class MarketMaker( object ):
             sleep(2)
             print('cancel 2')
             ords        = self.deri_orders
+            print(ords)
             for order in ords:
                 self.cancel(order['orderID'])
             self.mex.Order.Order_cancelAll(symbol='ETHUSD').result()
