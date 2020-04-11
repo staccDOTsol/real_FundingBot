@@ -820,8 +820,8 @@ class MarketMaker( object ):
         self.IM = round(self.IM * 1000)/1000
         
         print   (    'Actual initial margin across all accounts: ' + str(self.IM) + '% and leverage is ' + str(round(self.LEV * 1000)/1000) + 'x')
-        print   (    'Lev max short BTC: ' + str(round(self.LEV_LIM_SHORT['BTC'] * 1000) / 1000) + ' and long: ' + str(round(self.LEV_LIM_LONG['BTC'] * 1000) / 1000) + ' and percent of BTC in position out of max for short, then long: ' + str(round(self.LEV / self.LEV_LIM_SHORT['BTC'] * 1000) / 10) + '%, ' + str(round(self.LEV / self.LEV_LIM_LONG['BTC'] * 1000) / 10) + '%') 
-        print   (    'Lev max short ETH: ' + str(round(self.LEV_LIM_SHORT['ETH'] * 1000) / 1000) + ' and long: ' + str(round(self.LEV_LIM_LONG['ETH'] * 1000) / 1000) + ' and percent of ETH in position out of max for short, then long: ' + str(round(self.LEV / self.LEV_LIM_SHORT['ETH'] * 1000) / 10) + '%, ' + str(round(self.LEV / self.LEV_LIM_LONG['ETH'] * 1000) / 10) + '%') 
+        print   (    'Lev max short BTC: ' + str(round(self.LEV_LIM_SHORT['BTC'] * 1000) / 1000) + ' and long: ' + str(round(self.LEV_LIM_LONG['BTC'] * 1000) / 1000) + ' and percent of BTC in position out of max for short, then long: ' + str(round((self.LEV * self.percs['BTC']) / self.LEV_LIM_SHORT['BTC'] * 1000) / 10) + '%, ' + str(round((self.LEV * self.percs['BTC']) / self.LEV_LIM_LONG['BTC'] * 1000) / 10) + '%') 
+        print   (    'Lev max short ETH: ' + str(round(self.LEV_LIM_SHORT['ETH'] * 1000) / 1000) + ' and long: ' + str(round(self.LEV_LIM_LONG['ETH'] * 1000) / 1000) + ' and percent of ETH in position out of max for short, then long: ' + str(round((self.LEV * self.percs['ETH']) / self.LEV_LIM_SHORT['ETH'] * 1000) / 10) + '%, ' + str(round((self.LEV * self.percs['ETH']) / self.LEV_LIM_LONG['ETH'] * 1000) / 10) + '%') 
         string = "\n"
         if self.arbmult['BTC']['short'] != 'others':
 
@@ -889,10 +889,10 @@ class MarketMaker( object ):
         #    nasks = 0
         extraPrint(False, self.LEV)
         extraPrint(False, self.LEV_LIM_LONG[token])
-        if self.LEV / 2 > self.LEV_LIM_LONG[token]:
+        if self.LEV * self.pecs[token] > self.LEV_LIM_LONG[token]:
             place_bids = False
             nbids = 0
-        if self.LEV / 2 > self.LEV_LIM_SHORT[token]:
+        if self.LEV  * self.percs[token] > self.LEV_LIM_SHORT[token]:
             place_asks = False
             nasks = 0
     
