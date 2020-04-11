@@ -193,14 +193,14 @@ class MarketMaker( object ):
         self.LEV_LIM_LONG = {}
         self.LEV_LIM_SHORT = {}
         self.LEVERAGE_LIMIT_SHORT = 5
-        self.LEVERAGE_LIMIIT_LONG = 5
+        self.LEVERAGE_LIMIT_LONG = 5
         self.INITIAL_MARGIN_LIMIT_LONG        = 10       # % position limit long
 
         self.INITIAL_MARGIN_LIMIT_SHORT       = 10
         for token in self.exchangeRates:
             self.PCT_LIM_LONG[token]        = self.INITIAL_MARGIN_LIMIT_LONG 
             self.PCT_LIM_SHORT[token]       = self.INITIAL_MARGIN_LIMIT_SHORT    
-            self.LEV_LIM_LONG[token] = self.LEVERAGE_LIMIIT_LONG
+            self.LEV_LIM_LONG[token] = self.LEVERAGE_LIMIT_LONG
             self.LEV_LIM_SHORT[token] = self.LEVERAGE_LIMIT_SHORT
         self.equity_usd         = None
         self.equity_btc         = None
@@ -541,11 +541,11 @@ class MarketMaker( object ):
             self.PCT_LIM_LONG[thetoken]        = self.INITIAL_MARGIN_LIMIT_LONG 
             self.PCT_LIM_SHORT[thetoken]       = self.INITIAL_MARGIN_LIMIT_SHORT    
             self.PCT_LIM_SHORT[thetoken]  = self.PCT_LIM_SHORT[thetoken] * self.percs[thetoken]
-            self.PCT_LIM_LONG[thetoken]  = self.PCT_LIM_LONG[thetoken] * self.percs[thetoken]
+            self.PCT_LIM_LONG[thetoken]  = self.PCT_LIM_LONG[thetoken]  *  self.percs[thetoken]
     
-            self.LEV_LIM_LONG[thetoken] = self.LEVERAGE_LIMIIT_LONG
+            self.LEV_LIM_LONG[thetoken] = self.LEVERAGE_LIMIT_LONG
             self.LEV_LIM_SHORT[thetoken] = self.LEVERAGE_LIMIT_SHORT
-            self.LEV_LIM_LONG[thetoken] = self.LEV_LIM_LONG[thetoken] * self.percs[thetoken]
+            self.LEV_LIM_LONG[thetoken] = self.LEV_LIM_LONG[thetoken]  * self.percs[thetoken]
             self.LEV_LIM_SHORT[thetoken] = self.LEV_LIM_SHORT[thetoken] * self.percs[thetoken]
     
         if self.arbmult[token]['short'] == ex:
@@ -820,8 +820,8 @@ class MarketMaker( object ):
         self.IM = round(self.IM * 1000)/1000
         
         print   (    'Actual initial margin across all accounts: ' + str(self.IM) + '% and leverage is ' + str(round(self.LEV * 1000)/1000) + 'x')
-        print   (    'Lev max short BTC: ' + str(round(self.LEV_LIM_SHORT['BTC'] * 1000) / 1000) + ' and long: ' + str(round(self.LEV_LIM_LONG['BTC'] * 1000) / 1000) + ' and percent of BTC in position out of max for short, then long: ' + str(round((self.LEV * self.percs['BTC']) / self.LEV_LIM_SHORT['BTC'] * 1000) / 10) + '%, ' + str(round((self.LEV * self.percs['BTC']) / self.LEV_LIM_LONG['BTC'] * 1000) / 10) + '%') 
-        print   (    'Lev max short ETH: ' + str(round(self.LEV_LIM_SHORT['ETH'] * 1000) / 1000) + ' and long: ' + str(round(self.LEV_LIM_LONG['ETH'] * 1000) / 1000) + ' and percent of ETH in position out of max for short, then long: ' + str(round((self.LEV * self.percs['ETH']) / self.LEV_LIM_SHORT['ETH'] * 1000) / 10) + '%, ' + str(round((self.LEV * self.percs['ETH']) / self.LEV_LIM_LONG['ETH'] * 1000) / 10) + '%') 
+        print   (    'Lev max short BTC: ' + str(round(self.LEV_LIM_SHORT['BTC'] * 1000) / 1000) + ' and long: ' + str(round(self.LEV_LIM_LONG['BTC'] * 1000) / 1000) + ' and percent of BTC in position out of max for short, then long: ' + str(round((self.LEV / self.LEVERAGE_LIMIT_SHORT) * ((self.LEV_LIM_SHORT['BTC'] * 100)  /self.LEVERAGE_LIMIT_SHORT)* 1000) / 1000) + '%, ' + str(round((self.LEV / self.LEVERAGE_LIMIT_LONG )* ((self.LEV_LIM_LONG['BTC'] * 100) /self.LEVERAGE_LIMIT_LONG)* 1000) / 1000) + '%') 
+        print   (    'Lev max short ETH: ' + str(round(self.LEV_LIM_SHORT['ETH'] * 1000) / 1000) + ' and long: ' + str(round(self.LEV_LIM_LONG['ETH'] * 1000) / 1000) + ' and percent of ETH in position out of max for short, then long: ' + str(round((self.LEV /self.LEVERAGE_LIMIT_SHORT) * ((self.LEV_LIM_SHORT['ETH'] * 100) /self.LEVERAGE_LIMIT_SHORT) * 1000) / 1000) + '%, ' + str(round((self.LEV / self.LEVERAGE_LIMIT_LONG )* ((self.LEV_LIM_LONG['ETH'] * 100) /self.LEVERAGE_LIMIT_LONG)* 1000) / 1000) + '%') 
         string = "\n"
         if self.arbmult['BTC']['short'] != 'others':
 
@@ -859,13 +859,13 @@ class MarketMaker( object ):
         #self.PCT_LIM_SHORT[token]  = self.INITIAL_MARGIN_LIMIT_SHORT
         #self.PCT_LIM_LONG[token]  = self.INITIAL_MARGIN_LIMIT_LONG
         #self.LEV_LIM_SHORT[token]  = self.LEVERAGE_LIMIT_SHORT
-        #self.LEV_LIM_LONG[token]  = self.LEVERAGE_LIMIIT_LONG
+        #self.LEV_LIM_LONG[token]  = self.LEVERAGE_LIMIT_LONG
         #else:
             
             #self.PCT_LIM_SHORT[token]  = self.INITIAL_MARGIN_LIMIT_SHORT
             #self.PCT_LIM_LONG[token]  = self.INITIAL_MARGIN_LIMIT_LONG
             #self.LEV_LIM_SHORT[token]  = self.LEVERAGE_LIMIT_SHORT
-            #self.LEV_LIM_LONG[token]  = self.LEVERAGE_LIMIIT_LONG
+            #self.LEV_LIM_LONG[token]  = self.LEVERAGE_LIMIT_LONG
         bal_btc         = self.bals['effective']
         extraPrint(False, 'yo place orders ' + ex + ': ' + fut)
         
@@ -889,10 +889,12 @@ class MarketMaker( object ):
         #    nasks = 0
         extraPrint(False, self.LEV)
         extraPrint(False, self.LEV_LIM_LONG[token])
-        if self.LEV * self.pecs[token] > self.LEV_LIM_LONG[token]:
+        print((self.LEV / self.LEVERAGE_LIMIT_LONG )* ((self.LEV_LIM_LONG['ETH'] * 100) /self.LEVERAGE_LIMIT_LONG))
+        if (self.LEV / self.LEVERAGE_LIMIT_LONG )* ((self.LEV_LIM_LONG['ETH'] * 100) /self.LEVERAGE_LIMIT_LONG) > 100:
+        
             place_bids = False
             nbids = 0
-        if self.LEV  * self.percs[token] > self.LEV_LIM_SHORT[token]:
+        if (self.LEV / self.LEVERAGE_LIMIT_SHORT )* ((self.LEV_LIM_SHORT['ETH'] * 100) /self.LEVERAGE_LIMIT_SHORT) > 100:
             place_asks = False
             nasks = 0
     
