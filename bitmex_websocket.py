@@ -86,15 +86,13 @@ class BitMEXWebsocket:
         '''Return a ticker object. Generated from quote and trade.'''
         lastQuote = self.data['quote'][-1]
         lastTrade = self.data['trade'][-1]
-        ticker = {
-            "last": lastTrade['price'],
-            "buy": lastQuote['bidPrice'],
-            "sell": lastQuote['askPrice'],
-            "mid": (float(lastQuote['bidPrice'] or 0) + float(lastQuote['askPrice'] or 0)) / 2
-        }
-
-        # The instrument has a tickSize. Use it to round values.
         instrument = self.data['instrument'][0]
+
+        ticker = {
+            "buy": instrument['bidPrice'],
+            "sell": instrument['askPrice']        }
+        print(ticker)
+        # The instrument has a tickSize. Use it to round values.
         return ticker
     def send_command(self, command, args=None):
         '''Send a raw command.'''

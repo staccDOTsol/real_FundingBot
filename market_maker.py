@@ -1,5 +1,8 @@
 # This code is for sample purposes only, comes as is and with no warranty or guarantee of performance
-from bitmex_websocket import BitMEXWebsocket
+#from bitmex_websocket import BitMEXWebsocket
+
+#now useing api-connectors/official-ws/delta-server/index.js due to peformance issues. Run with nohup node index.js &
+
 import linecache
 import sys
 import threading
@@ -27,14 +30,14 @@ from ssc2ce.deribit import Deribit, AuthType
 testing = False
 
 import inspect  
-def PrintException(e):
+def PrintException():
     exc_type, exc_obj, tb = sys.exc_info()
     f = tb.tb_frame
     lineno = tb.tb_lineno
     filename = f.f_code.co_filename
     linecache.checkcache(filename)
     line = linecache.getline(filename, lineno, f.f_globals)
-    extraPrint(False, 'EXCEPTION IN ({}, LINE {} "{}"): {}'.format(filename, lineno, line.strip(), exc_obj))
+    print('EXCEPTION IN ({}, LINE {} "{}"): {}'.format(filename, lineno, line.strip(), exc_obj))
     sleep(10)
 def extraPrint(toconsole, string):
     
@@ -208,7 +211,10 @@ class MarketMaker( object ):
         self.LEV = 1
         self.IM = 1
         self.futtoks = {}
+        self.bid_ords = {}
+        self.ask_ords = {}
         self.ccxt = None
+        self.mexfundingfirst = True
         self.t = 0
         self.oldte = 0
         self.bitOrders = []
@@ -443,24 +449,27 @@ class MarketMaker( object ):
 
         except Exception as e:
             extraPrint(False, e)
-            PrintException(e)
+            PrintException()
         try:
-            res = self.mex.Funding.Funding_get(symbol='XBTUSD', reverse=True, count=1).result()
-            
-            extraPrint(False, 'funding')
-            extraPrint(False, res[0])
-            res = res[0][0]['fundingRate'] * 3
+            r = random.randint(0, 50)
+            if self.mexfundingfirst == True or r == 0:
+                self.mexfundingfirst = False
+                res = self.mex.Funding.Funding_get(symbol='XBTUSD', reverse=True, count=1).result()
+                
+                extraPrint(False, 'funding')
+                extraPrint(False, res[0])
+                res = res[0][0]['fundingRate'] * 3
 
-            self.exchangeRates['BTC']['bitmex'] = res
+                self.exchangeRates['BTC']['bitmex'] = res
 
-            res = self.mex.Funding.Funding_get(symbol='ETHUSD', reverse=True, count=1).result()
-            res = res[0][0]['fundingRate'] * 3
+                res = self.mex.Funding.Funding_get(symbol='ETHUSD', reverse=True, count=1).result()
+                res = res[0][0]['fundingRate'] * 3
 
-            self.exchangeRates['ETH']['bitmex'] = res
+                self.exchangeRates['ETH']['bitmex'] = res
 
         except Exception as e:
             extraPrint(False, e)
-            PrintException(e)
+            PrintException()
         try:
             
             res = self.bit.Funding.Funding_getRate(symbol="BTCUSD").result()
@@ -476,7 +485,7 @@ class MarketMaker( object ):
             self.exchangeRates['ETH']['bybit'] = res
         except Exception as e:
             extraPrint(False, e) # extraPrint(False, e)
-            PrintException(e)
+            PrintException()
         extraPrint(False, self.exchangeRates)
         positive = {}
         for coins in self.exchangeRates:
@@ -548,7 +557,7 @@ class MarketMaker( object ):
     def update_balances( self ):
         try:
             if testing == False:
-                res = self.ws['XBTUSD'].funds()
+                res = requests.get("http://localhost:4444/margin").json()[0]
             
                 bal = res['amount'] / 100000000
             else:
@@ -563,7 +572,7 @@ class MarketMaker( object ):
             self.bals['bitmex'] = bal
         except Exception as e:
             extraPrint(False, e)
-            PrintException(e)
+            PrintException()
         try:
             bal = self.bit.Wallet.Wallet_getBalance(coin="BTC").result()[0]['result']['BTC']['equity']
             self.bals['bybit-btc'] = bal
@@ -573,7 +582,7 @@ class MarketMaker( object ):
             self.bals['bybit-eth'] = bal * self.ethrate
         except Exception as e:
             extraPrint(False, e)
-            PrintException(e)
+            PrintException()
         self.bals['deribit-btc'] = self.deri_bal['BTC']
 
         self.ethrate = self.get_spot("ETH") / self.get_spot("BTC")
@@ -644,21 +653,29 @@ class MarketMaker( object ):
 
             except Exception as e:
                 extraPrint(False, e)
-                PrintException(e)
+                PrintException()
             
         if exchange == 'bitmex':
             if testing == False:
-                t = self.ws[contract].get_ticker2()
-            
-                best_ask = t['sell']
-                best_bid = t['buy']
+                r = random.randint(1, 2)
+                t = requests.get('http://localhost:4444/instrument?symbol=' + contract).json()[0]
+                if r == 0:
+                    best_ask = t['askPrice']
+                    best_bid = t['bidPrice']
+                if r >= 1:
+                    if 'ETH' in contract:
+                        best_ask = t['askPrice'] + 0.1
+                        best_bid = t['bidPrice'] - 0.1
+                    else:
+                        best_ask = t['askPrice'] + 1
+                        best_bid = t['bidPrice'] - 1
+                        
             else:
 
                 r = requests.get("https://www.bitmex.com/api/v1/instrument?symbol=" + contract + "&count=1&reverse=true").json()
 
                 best_ask = r[0]['askPrice']
                 best_bid = r[0]['bidPrice']
-            
             
                    
         if exchange == 'bybit':
@@ -686,7 +703,7 @@ class MarketMaker( object ):
                 best_ask    = result[0]['result'][0]['ask_price']
             except Exception as e:
                 extraPrint(False, e)
-                PrintException(e)
+                PrintException()
         extraPrint(False, exchange)
         extraPrint(False, { 'bid': best_bid, 'ask': best_ask })
         return { 'bid': best_bid, 'ask': best_ask }
@@ -794,8 +811,8 @@ class MarketMaker( object ):
         self.IM = round(self.IM * 1000)/1000
         
         print   (    'Actual initial margin across all accounts: ' + str(self.IM) + '% and leverage is ' + str(round(self.LEV * 1000)/1000) + 'x')
-        print   (    'Lev max short BTC: ' + str(round(self.LEV_LIM_SHORT['BTC'] * 1000) / 1000) + ' and long: ' + str(round(self.LEV_LIM_LONG['BTC'] * 1000) / 1000) + ' and percent of BTC in position out of max for short, then long: ' + str(round(self.LEV / self.LEV_LIM_SHORT['BTC'] * 1000) / 1000) + '%, ' + str(round(self.LEV / self.LEV_LIM_LONG['BTC'] * 1000) / 1000) + '%') 
-        print   (    'Lev max short ETH: ' + str(round(self.LEV_LIM_SHORT['ETH'] * 1000) / 1000) + ' and long: ' + str(round(self.LEV_LIM_LONG['ETH'] * 1000) / 1000) + ' and percent of BTC in position out of max for short, then long: ' + str(round(self.LEV / self.LEV_LIM_SHORT['ETH'] * 1000) / 1000) + '%, ' + str(round(self.LEV / self.LEV_LIM_LONG['ETH'] * 1000) / 1000) + '%') 
+        print   (    'Lev max short BTC: ' + str(round(self.LEV_LIM_SHORT['BTC'] * 1000) / 1000) + ' and long: ' + str(round(self.LEV_LIM_LONG['BTC'] * 1000) / 1000) + ' and percent of BTC in position out of max for short, then long: ' + str(round(self.LEV_LIM_SHORT['BTC'] / self.LEV * 1000) / 1000) + '%, ' + str(round(self.LEV / self.LEV_LIM_LONG['BTC'] * 1000) / 1000) + '%') 
+        print   (    'Lev max short ETH: ' + str(round(self.LEV_LIM_SHORT['ETH'] * 1000) / 1000) + ' and long: ' + str(round(self.LEV_LIM_LONG['ETH'] * 1000) / 1000) + ' and percent of BTC in position out of max for short, then long: ' + str(round(self.LEV_LIM_SHORT['ETH'] / self.LEV * 1000) / 1000) + '%, ' + str(round(self.LEV / self.LEV_LIM_LONG['ETH'] * 1000) / 1000) + '%') 
         string = "\n"
         if self.arbmult['BTC']['short'] != 'others':
 
@@ -880,7 +897,7 @@ class MarketMaker( object ):
 
     
         if not place_bids and not place_asks:
-            extraPrint(False,  'No bid no offer for ' + fut + str( math.trunc( qtybtc ) ))
+            print( 'No bid no offer for ' + fut + str( math.trunc( qtybtc ) ))
             return 
         extraPrint(False, 'fut: ' + fut)    
         tsz = self.get_ticksize( fut )            
@@ -899,18 +916,29 @@ class MarketMaker( object ):
             ask_mkt = max( spot, bid_mkt )
         
         cancel_oids = []
-        bid_ords = ords  = ask_ords = []
+        for exchange in self.totrade:
+            try:
+                extraPrint(False, self.bid_ords[exchange][0])
+            except:
+                self.bid_ords[exchange] = []
+            try:
+                extraPrint(False, self.ask_ords[exchange][0])
+            except:
+                self.ask_ords[exchange] = []
+            
+             
+        ords = []
         if ex == 'deribit':
             try:
                 ords        = self.deri_orders
                 for order in ords:
                     order['orderID'] = order['order_id']
-                bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                self.bid_ords[ex]        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
                 
-                ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]
+                self.ask_ords[ex]        = [ o for o in ords if o[ 'direction' ] == 'sell' ]
             except Exception as e:
                 extraPrint(False, e)#extraPrint(False, e)
-                PrintException(e)
+                PrintException()
         if ex == 'bybit':
             try:
                 ords = self.bitws.get_data('order')
@@ -933,9 +961,9 @@ class MarketMaker( object ):
                 for ords in self.bitOrders:
                     ords['orderID'] = ords['order_id']
 
-                    bid_ords        = [ o for o in ords if o[ 'side' ] == 'Buy'  ]
+                    self.bid_ords[ex]        = [ o for o in ords if o[ 'side' ] == 'Buy'  ]
                 
-                    ask_ords        = [ o for o in ords if o[ 'side' ] == 'Sell' ]
+                    self.ask_ords[ex]        = [ o for o in ords if o[ 'side' ] == 'Sell' ]
                 abc=123#extraPrint(False, ords2)
             except Exception as e:
                 extraPrint(False, e)
@@ -943,7 +971,13 @@ class MarketMaker( object ):
         if ex == 'bitmex':
             extraPrint(False, ords)
             if testing == False:
-                ords = self.ws[fut].open_orders()
+                ords = []
+                orders = requests.get("http://localhost:4444/order").json()
+                for order in orders:
+                    for theorder in orders[order]:
+                        if theorder['ordStatus'].lower() == 'new':
+
+                            ords.append(theorder)
             else:
                 ords1 = self.mex.Order.Order_getOrders(symbol=fut, reverse=True, count=500).result()[0]
                 ords = []
@@ -953,14 +987,17 @@ class MarketMaker( object ):
                             order['orderID'] = order['orderId']
                     if order['ordStatus'].lower() == 'new':
                         ords.append(order)
-            bid_ords        = [ o for o in ords if o[ 'side' ] == 'Buy'  ]
+            self.bid_ords[ex]        = [ o for o in ords if o[ 'side' ] == 'Buy'  ]
             
-            ask_ords        = [ o for o in ords if o[ 'side' ] == 'Sell' ]
+            self.ask_ords[ex]        = [ o for o in ords if o[ 'side' ] == 'Sell' ]
        
         asks = []
         bids = []
-        len_bid_ords    = min( len( bid_ords ), nbids )
-        len_ask_ords    = min( len( ask_ords ), nasks )
+        len_bid_ords = {}
+        len_ask_ords = {}
+        for exchange in self.totrade:
+            len_bid_ords[exchange]    = min( len( self.bid_ords[exchange] ), nbids )
+            len_ask_ords[exchange]    = min( len( self.ask_ords[exchange] ), nasks )
         if place_bids:      
             bids.append(bid_mkt)
         if place_asks:
@@ -975,10 +1012,10 @@ class MarketMaker( object ):
 
         extraPrint(False, place_asks)
 
-        self.execute_arb (ex, fut, skew_size, nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords )    
+        self.execute_arb (ex, fut, skew_size, nbids, nasks, place_bids, place_asks, bids, asks, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords )    
 
 
-    def execute_arb ( self, ex, fut, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords):
+    def execute_arb ( self, ex, fut, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords):
         
 
         token = 'BTC'
@@ -1023,6 +1060,7 @@ class MarketMaker( object ):
                         self.bit.Order.Order_new(side="Sell",symbol=fut,order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['ask'],time_in_force="PostOnly").result()
                   
                     if ex == 'bitmex':
+                        sleep(0.1)
                         self.mex.Order.Order_new(symbol=fut, orderQty=-1 * qty, price=self.get_bbo('bitmex', fut)['ask'],execInst="ParticipateDoNotInitiate").result()
      
             if self.positions[fut]['size'] > 0:
@@ -1040,7 +1078,8 @@ class MarketMaker( object ):
         
 
                     if ex == 'bitmex':
-                        self.mex.Order.Order_new(symbol=fut, orderQty=qty, price=self.get_bbo('bitmex', fut)['ask'],execInst="ParticipateDoNotInitiate").result()
+                        sleep(0.1)
+                        self.mex.Order.Order_new(symbol=fut, orderQty=qty, price=self.get_bbo('bitmex', fut)['bid'],execInst="ParticipateDoNotInitiate").result()
      
 
         extraPrint(False, 'skew_size[token]: ' + str(skew_size[token]))
@@ -1052,7 +1091,7 @@ class MarketMaker( object ):
         try:
             if i >= 0:
              
-                oid = bid_ords[ i ][ 'orderID' ]
+                oid = self.bid_ords[ex][ i ][ 'orderID' ]
                 try:
                     if ex == 'deribit':
                         self.client.edit( oid, qty, prc )
@@ -1061,7 +1100,10 @@ class MarketMaker( object ):
                     if ex == 'bitmex':
                         self.mex.Order.Order_amend(orderID=oid, price=prc).result()
                 except Exception as e:
+                    print(e)
+                    cancel_oids.append(oid)
                     abc=123#extraPrint(False, e)
+
                     extraPrint(False, e)
         except Exception as e:
                 abc=123#extraPrint(False, e)
@@ -1074,7 +1116,7 @@ class MarketMaker( object ):
         try:
             if i >= 0:
              
-                oid = bid_ords[ i ][ 'orderID' ]
+                oid = self.bid_ords[ex][ i ][ 'orderID' ]
                 try:
                     if ex == 'deribit':
                         self.client.edit( oid, qty, prc )
@@ -1083,6 +1125,8 @@ class MarketMaker( object ):
                     if ex == 'bitmex':
                         self.mex.Order.Order_amend(orderID=oid, price=prc).result()
                 except Exception as e:
+                    print(e)
+                    cancel_oids.append(oid)
                     abc=123#extraPrint(False, e)
                     extraPrint(False, e)
         except Exception as e:
@@ -1091,10 +1135,10 @@ class MarketMaker( object ):
         
             
         
-        self.execute_longs ( qty, ex, fut, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
-        self.execute_shorts ( qty, ex, fut, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
+        self.execute_longs ( qty, ex, fut, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
+        self.execute_shorts ( qty, ex, fut, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
 
-    def execute_longs ( self, qty, ex, fut, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords):
+    def execute_longs ( self, qty, ex, fut, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords):
         extraPrint(False, fut + ' long?')
         token = 'BTC'
         if 'ETH' in fut:
@@ -1136,6 +1180,7 @@ class MarketMaker( object ):
                     self.client.sell( fut, qty2, self.get_bbo('deribit', fut)['ask'], 'true' )
                 if 'XBT' in fut or fut == 'ETHUSD':
                 # mex
+                    sleep(0.1)
                     self.mex.Order.Order_new(symbol=fut, orderQty=-1 * qty, price=self.get_bbo('bitmex', fut)['ask'],execInst="ParticipateDoNotInitiate").result()
      
                 if 'bybit' in fut or 'BTCUSD' == fut:
@@ -1155,6 +1200,8 @@ class MarketMaker( object ):
                     self.client.buy( fut, qty2, self.get_bbo('deribit', fut)['bid'], 'true' )
                 if 'XBT' in fut or fut == 'ETHUSD':
                 # mex
+
+                    sleep(0.1)
                     self.mex.Order.Order_new(symbol=fut, orderQty=qty, price=self.get_bbo('bitmex', fut)['bid'],execInst="ParticipateDoNotInitiate").result()
      
                 if 'bybit' in fut or 'BTCUSD' == fut:
@@ -1196,6 +1243,8 @@ class MarketMaker( object ):
                     if afut != "":
                         if math.fabs(self.positions[fut]['size']) >= 100 and math.fabs(self.positions[fut]['size']) > 1.33 * math.fabs(self.positions[afut]['size']):
                             extraPrint(False, 'reduced at a profit too much! We must now lose!')
+                            
+                            sleep(0.1)
                             self.mex.Order.Order_new(symbol=fut, orderQty=qty, price=self.get_bbo('bitmex', fut)['bid'],execInst="ParticipateDoNotInitiate").result()
                     
      
@@ -1234,6 +1283,8 @@ class MarketMaker( object ):
                     if afut != "":
                         if math.fabs(self.positions[fut]['size']) >= 100 and math.fabs(self.positions[fut]['size']) > 1.33 * math.fabs(self.positions[afut]['size']):
                             extraPrint(False, 'reduced at a profit too much! We must now lose!')
+                            
+                            sleep(0.1)
                             self.mex.Order.Order_new(symbol=fut, orderQty=qty, price=self.get_bbo('bitmex', fut)['bid'],execInst="ParticipateDoNotInitiate").result()
                             
 
@@ -1251,11 +1302,13 @@ class MarketMaker( object ):
                     afut = fut
                         
                     extraPrint(False, 'less maxskew mex')
-                    self.mex.Order.Order_new(symbol=fut, orderQty=qty, price=self.get_bbo(ex, fut)['bid'],execInst="ParticipateDoNotInitiate").result()
+                    self.mex.Order.Order_new(symbol=fut, orderQty=qty, price=self.get_bbo('bitmex', fut)['bid'],execInst="ParticipateDoNotInitiate").result()
                     if afut != "":
                         if math.fabs(self.positions[fut]['size']) >= 100 and math.fabs(self.positions[fut]['size']) > 1.33 * math.fabs(self.positions[afut]['size']):
                             extraPrint(False, 'reduced at a profit too much! We must now lose!')
-                            self.mex.Order.Order_new(symbol=fut, orderQty=-1*qty, price=self.get_bbo(ex, fut)['ask'],execInst="ParticipateDoNotInitiate").result()
+                            
+                            sleep(0.1)
+                            self.mex.Order.Order_new(symbol=fut, orderQty=-1*qty, price=self.get_bbo('bitmex', fut)['ask'],execInst="ParticipateDoNotInitiate").result()
                     
                 for fut in self.futures['deribit']:
                     if qty + skew_size[token] * -1 <  self.MAX_SKEW:
@@ -1277,10 +1330,10 @@ class MarketMaker( object ):
                                 extraPrint(False, 'reduced at a profit too much! We must now lose!')
                                 r = self.bit.Order.Order_new(side="Buy",symbol=fut,order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['bid'],time_in_force="PostOnly").result()
                     
-            self.execute_cancels(ex, fut, skew_size[token],  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
+            self.execute_cancels(ex, fut, skew_size[token],  nbids, nasks, place_bids, place_asks, bids, asks, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
 
 
-    def execute_shorts ( self, qty, ex, fut, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords):
+    def execute_shorts ( self, qty, ex, fut, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords):
         extraPrint(False, fut + ' long?')
         token = 'BTC'
         if 'ETH' in fut:
@@ -1321,7 +1374,9 @@ class MarketMaker( object ):
                     if afut != "":
                         if math.fabs(self.positions[fut]['size']) >= 100 and math.fabs(self.positions[fut]['size']) > 1.33 * math.fabs(self.positions[afut]['size']):
                             extraPrint(False, 'reduced at a profit too much! We must now lose!')
-                            r = self.mex.Order.Order_new(side="Sell",symbol=fut,order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['ask'],time_in_force="PostOnly").result()
+                            
+                            sleep(0.1)
+                            r = self.mex.Order.Order_new(symbol=fut, orderQty=--1*qty, price=self.get_bbo('bitmex', fut)['ask'],execInst="ParticipateDoNotInitiate").result()
                 
      
             if ex == 'bybit':
@@ -1357,6 +1412,8 @@ class MarketMaker( object ):
                     if afut != "":
                         if math.fabs(self.positions[fut]['size']) >= 100 and math.fabs(self.positions[fut]['size']) > 1.33 * math.fabs(self.positions[afut]['size']):
                             extraPrint(False, 'reduced at a profit too much! We must now lose!')
+                            
+                            sleep(0.1)
                             self.mex.Order.Order_new(symbol=fut, orderQty=-1*qty, price=self.get_bbo('bitmex', fut)['ask'],execInst="ParticipateDoNotInitiate").result()
                     
 
@@ -1374,8 +1431,9 @@ class MarketMaker( object ):
                 if qty + skew_size[token] * -1 <  self.MAX_SKEW:
                     afut = fut
                         
+                    sleep(0.1)
                     extraPrint(False, 'short mex unskewed')
-                    self.mex.Order.Order_new(symbol=fut, orderQty=-1 * qty, price=self.get_bbo(ex, fut)['ask'],execInst="ParticipateDoNotInitiate").result()
+                    self.mex.Order.Order_new(symbol=fut, orderQty=-1 * qty, price=self.get_bbo('bitmex', fut)['ask'],execInst="ParticipateDoNotInitiate").result()
                 for fut in self.futures['deribit']:
                     if qty + skew_size[token] < self.MAX_SKEW:
                         extraPrint(False, 'tokenfut! ' + fut + ' deribit')
@@ -1405,15 +1463,11 @@ class MarketMaker( object ):
                                 extraPrint(False, 'reduced at a profit too much! We must now lose!')
                                 r = self.bit.Order.Order_new(side="Sell",symbol=fut,order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['ask'],time_in_force="PostOnly").result()
                                     
-            self.execute_cancels(ex, fut, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
+            self.execute_cancels(ex, fut, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
         
         
-    def execute_cancels(self, ex, fut, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords):
+    def execute_cancels(self, ex, fut, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords):
         if ex == 'deribit':
-            if nbids < len( bid_ords ):
-                cancel_oids += [ o[ 'orderID' ] for o in bid_ords[ nbids : ]]
-            if nasks < len( ask_ords ):
-                cancel_oids += [ o[ 'orderID' ] for o in ask_ords[ nasks : ]]
             for oid in cancel_oids:
                 try:
                     self.client.cancel( oid )
@@ -1421,30 +1475,28 @@ class MarketMaker( object ):
                     self.logger.warn( 'Order cancellations failed: %s' % oid )
         if ex == 'bybit':
             
-            if nbids < len( bid_ords ):
-                cancel_oids += [ o[ 'orderID' ] for o in bid_ords[ nbids : ]]
-            if nasks < len( ask_ords ):
-                cancel_oids += [ o[ 'orderID' ] for o in ask_ords[ nasks : ]]
+            #if nbids < len( self.bid_ords[ex] ):
+            #    cancel_oids += [ o[ 'orderID' ] for o in self.bid_ords[ex][ nbids : ]]
+            #if nasks < len( self.ask_ords[ex] ):
+            #    cancel_oids += [ o[ 'orderID' ] for o in self.ask_ords[ex][ nasks : ]]
+            
             for oid in cancel_oids:
                 try:
                     self.bit.Order.Order_cancel(order_id=oid).result()
                 except Exception as e:
                     extraPrint(False, e)
-                    PrintException(e)
+                    PrintException()
                     self.logger.warn( 'Order cancellations failed: %s' % oid )
 
         if ex == 'bitmex':
-            if nbids < len( bid_ords ):
-                cancel_oids += [ o[ 'orderID' ] for o in bid_ords[ nbids : ]]
-            if nasks < len( ask_ords ):
-                cancel_oids += [ o[ 'orderID' ] for o in ask_ords[ nasks : ]]
             for oid in cancel_oids:
                 try:
-                    self.mex.Order.Order_cancel(orderID=oid).result()
-
+                    #print('Try cancelled bitmex order... ' + str(oid))
+                #    self.mex.Order.Order_cancel(orderID=oid).result()
+                    abc123 = 1
                 except Exception as e:
                     extraPrint(False, e)
-                    PrintException(e)
+                    PrintException()
                     self.logger.warn( 'Order cancellations failed: %s' % oid )
     def restart( self ):        
         try:
@@ -1452,6 +1504,7 @@ class MarketMaker( object ):
             extraPrint(False,  strMsg )
             
             self.client.cancelall()
+            print('cancel 1')
             self.mex.Order.Order_cancelAll(symbol='ETHUSD').result()
             self.bit.Order.Order_cancelAll(symbol='BTCUSD').result()
             self.mex.Order.Order_cancelAll(symbol='XBTUSD').result()
@@ -1538,6 +1591,7 @@ class MarketMaker( object ):
 
         
         self.client.cancelall()
+        print('cancel 2')
         self.mex.Order.Order_cancelAll(symbol='ETHUSD').result()
         self.bit.Order.Order_cancelAll(symbol='BTCUSD').result()
         self.mex.Order.Order_cancelAll(symbol='XBTUSD').result()
@@ -1554,17 +1608,17 @@ class MarketMaker( object ):
                 'averagePrice': None,
                 'floatingPl': 0}
         if testing == False:
-            extraPrint(False, 'initiating bitmex websocket connections, this may take a second... note Bitmex closes websocket connections after 24hr, so this algorithm is set to restart itself then for you :)')    
+            #extraPrint(False, 'initiating bitmex websocket connections, this may take a second... note Bitmex closes websocket connections after 24hr, so this algorithm is set to restart itself then for you :)')    
             delta = timedelta(hours=23)
             nearly_one_day = (start_time + delta)
             wait_seconds = (nearly_one_day - start_time).seconds  
             r = Timer(wait_seconds, self.restart, ())
             r.start()
        
-            for k in self.futures['bitmex']:
-                self.ws[k] = (BitMEXWebsocket(endpoint="https://www.bitmex.com/api/v1", symbol=k, api_key="hYWO6-TaiH-FC5kDGUTGP-hO", api_secret="Cz92m7jRam3JTWHQZwiIKWUcSl5jvexquXldAM79kWmRzqvW"))
-                extraPrint(False, k + ' websocket started!')
-            extraPrint(False, 'setting that timer for ' + str(wait_seconds / 60 / 60) + ' hours...')
+            #for k in self.futures['bitmex']:
+            #    self.ws[k] = (BitMEXWebsocket(endpoint="https://www.bitmex.com/api/v1", symbol=k, api_key="hYWO6-TaiH-FC5kDGUTGP-hO", api_secret="Cz92m7jRam3JTWHQZwiIKWUcSl5jvexquXldAM79kWmRzqvW"))
+             #   extraPrint(False, k + ' websocket started!')
+            #extraPrint(False, 'setting that timer for ' + str(wait_seconds / 60 / 60) + ' hours...')
             
         self.update_balances()
         
@@ -1606,7 +1660,7 @@ class MarketMaker( object ):
         except Exception as e: 
             abc123 = 1      
             extraPrint(False, e)
-            #PrintException(e)
+            #PrintException()
 
         
         spot    = self.get_spot('BTC')
@@ -1674,7 +1728,7 @@ class MarketMaker( object ):
                             except Exception as e:
                                 extraPrint(False, e)
                                 extraPrint(False, positions)
-                                PrintException(e)
+                                PrintException()
                     positions = self.bitws.get_data('position')
                     
                     extraPrint(False, 'bybit positions')
@@ -1703,25 +1757,24 @@ class MarketMaker( object ):
                 except Exception as e:
                     extraPrint(False, e)
                     extraPrint(False, positions)
-                    PrintException(e)
+                    PrintException()
             if ex == 'bitmex':
                 try:
 
                     if testing == False:
-                        for fut in self.futures['bitmex']:
-                            positions = self.ws[fut].positions()
-                            for pos in positions:
-                                if pos[ 'symbol' ] in self.futures['bitmex']:
-
-                                    size = pos['currentQty']
-                                    if 'ETH' in pos['symbol']:
-                                        extraPrint(False, pos)
-                                        extraPrint(False, self.ethrate)
-                                    self.positions[pos['symbol']] = {
-                                        'size':         size,
-                                        'averagePrice': pos['avgEntryPrice'],
-                                        'floatingPl': pos['unrealisedPnlPcnt']}
-                    
+                        positions = requests.get("http://localhost:4444/position").json()
+                        for pos in positions:
+                            size = positions[pos][0]['currentQty']
+                            avgEntry = positions[pos][0]['avgEntryPrice']
+                            floatingPl = positions[pos][0]['unrealisedPnlPcnt']
+                            if 'ETH' in positions[pos][0]['symbol']:
+                                extraPrint(False, pos)
+                                extraPrint(False, self.ethrate)
+                            self.positions[positions[pos][0]['symbol']] = {
+                                'size':         size,
+                                'averagePrice': avgEntry,
+                                'floatingPl': floatingPl}
+                
                     else:
                         positions = self.mex.Position.Position_get(filter=json.dumps({'symbol': 'XBTUSD'})).result()[0]
                     
@@ -1736,16 +1789,6 @@ class MarketMaker( object ):
                                     'size':         size,
                                     'averagePrice': pos['avgEntryPrice'],
                                     'floatingPl': pos['unrealisedPnlPcnt']}
-                    
-                except Exception as e:
-                    extraPrint(False, ex + ' error!')
-                    extraPrint(False, e)
-                    PrintException(e)
-                    extraPrint(False, positions)
-            
-                try:
-                    if testing == True:
-                    
                         positions = self.mex.Position.Position_get(filter=json.dumps({'symbol': 'ETHUSD'})).result()[0]
                         
                         for pos in positions:
@@ -1760,15 +1803,12 @@ class MarketMaker( object ):
                                     'averagePrice': pos['avgEntryPrice'],
                                     'floatingPl': pos['unrealisedPnlPcnt']}
                     
+                    
                 except Exception as e:
-                    extraPrint(False, ex + ' error!')
-                    extraPrint(False, e)
-                    PrintException(e)
-                    extraPrint(False, positions)
-                
-        for pos in self.positions:
-            if self.positions[pos]['floatingPl'] != 0:
-                extraPrint(False, pos + ' upnl ' + str(self.positions[pos]['floatingPl']))
+                    print(ex + ' error!')
+                    print(e)
+                    PrintException()
+                    print(positions)
 
 
 mmbot = MarketMaker( monitor = False, output = True )       
@@ -1790,7 +1830,7 @@ if __name__ == '__main__':
                 abc123 = 1
         
         mmbot.client.cancelall()
-    
+        print('cancel 3')
         mmbot.mex.Order.Order_cancelAll(symbol='XBTUSD').result()
         mmbot.mex.Order.Order_cancelAll(symbol='ETHUSD').result()
         mmbot.bit.Order.Order_cancelAll(symbol='ETHUSD').result()
@@ -1798,6 +1838,8 @@ if __name__ == '__main__':
         
         sys.exit()
     except Exception as e:
+        print('restarting...')
+        print(e)
         print   (    traceback.format_exc())
         if args.restart:
             mmbot.restart()
