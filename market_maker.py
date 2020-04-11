@@ -1586,7 +1586,7 @@ class MarketMaker( object ):
                 t_ts = t_now
             sleep(0.01)
             size = int (100)
-            for i in range(5):
+            for a in range(6):
                 sleep(15)
                 print('cancel 2')
                 self.client.cancelall()
@@ -1594,10 +1594,12 @@ class MarketMaker( object ):
                 self.bit.Order.Order_cancelAll(symbol='BTCUSD').result()
                 self.mex.Order.Order_cancelAll(symbol='XBTUSD').result()
                 self.bit.Order.Order_cancelAll(symbol='ETHUSD').result()
+                        
+                for i in range(2):
                     
-                for ex in self.totrade:
-                    for token in self.exchangeRates:
-                        self.place_orders(ex, token)
+                    for ex in self.totrade:
+                        for token in self.exchangeRates:
+                            self.place_orders(ex, token)
             extraPrint(False, 'out of sleep!')
             #self.place_orders()
 
