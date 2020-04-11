@@ -923,6 +923,8 @@ class MarketMaker( object ):
                     self.mex.Order.Order_new(symbol=fut, orderQty=-1 * qty, price=self.get_bbo('bitmex', fut)['ask'],execInst="ParticipateDoNotInitiate").result()
      
                 if ex == 'deribit':
+                    if 'BTC' in fut:
+                        qty = qty / 10
                     self.client.sell( fut, qty, self.get_bbo('deribit', fut)['ask'], 'true' )
                 if ex == 'bybit':
                     self.bit.Order.Order_new(side="Sell",symbol=fut,order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['ask'],time_in_force="PostOnly").result()
@@ -934,6 +936,9 @@ class MarketMaker( object ):
                     self.mex.Order.Order_new(symbol=fut, orderQty=qty, price=self.get_bbo('bitmex', fut)['bid'],execInst="ParticipateDoNotInitiate").result()
      
                 if ex == 'deribit':
+                    
+                    if 'BTC' in fut:
+                        qty = qty / 10
                     self.client.buy( fut, qty, self.get_bbo('deribit', fut)['bid'], 'true' )
                 if ex == 'bybit':
                     self.bit.Order.Order_new(side="Buy",symbol=fut,order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['bid'],time_in_force="PostOnly").result()
