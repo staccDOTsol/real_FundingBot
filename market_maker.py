@@ -889,10 +889,10 @@ class MarketMaker( object ):
         #    nasks = 0
         extraPrint(False, self.LEV)
         extraPrint(False, self.LEV_LIM_LONG[token])
-        if self.LEV > self.LEV_LIM_LONG[token]:
+        if self.LEV / 2 > self.LEV_LIM_LONG[token]:
             place_bids = False
             nbids = 0
-        if self.LEV > self.LEV_LIM_SHORT[token]:
+        if self.LEV / 2 > self.LEV_LIM_SHORT[token]:
             place_asks = False
             nasks = 0
     
@@ -1601,7 +1601,7 @@ class MarketMaker( object ):
                 t_ts = t_now
             sleep(0.01)
             size = int (100)
-            sleep(2)
+            sleep(4)
             print('cancel 2')
             ords        = self.deri_orders
 
@@ -1614,7 +1614,7 @@ class MarketMaker( object ):
             self.mex.Order.Order_cancelAll(symbol='XBTUSD').result()
             self.bit.Order.Order_cancelAll(symbol='ETHUSD').result()
                     
-            for i in range(2):
+            for i in range(3):
                 
                 for ex in self.totrade:
                     for token in self.exchangeRates:
@@ -1684,7 +1684,11 @@ class MarketMaker( object ):
             #    self.ws[k] = (BitMEXWebsocket(endpoint="https://www.bitmex.com/api/v1", symbol=k, api_key="hYWO6-TaiH-FC5kDGUTGP-hO", api_secret="Cz92m7jRam3JTWHQZwiIKWUcSl5jvexquXldAM79kWmRzqvW"))
              #   extraPrint(False, k + ' websocket started!')
             #extraPrint(False, 'setting that timer for ' + str(wait_seconds / 60 / 60) + ' hours...')
-            
+        delta = timedelta(minutes=10)
+        nearly_one_day = (start_time + delta)
+        wait_seconds = (nearly_one_day - start_time).seconds  
+        r = Timer(wait_seconds, self.restart, ())
+        r.start()
         self.update_balances()
         
         self.update_positions()
