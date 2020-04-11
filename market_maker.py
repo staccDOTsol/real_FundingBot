@@ -1627,9 +1627,9 @@ class MarketMaker( object ):
                 ords2        = self.client.getopenorders( 'ETH-PERPETUAL' )
             
             for order in ords:
-                self.client.cancel(order['orderID'])
+                self.client.cancel(order['orderId'])
             for order in ords2:
-                self.client.cancel(order['orderID'])
+                self.client.cancel(order['orderId'])
             
             self.mex.Order.Order_cancelAll(symbol='ETHUSD').result()
             self.bit.Order.Order_cancelAll(symbol='BTCUSD').result()
