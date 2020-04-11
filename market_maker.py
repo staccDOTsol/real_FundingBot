@@ -496,7 +496,7 @@ class MarketMaker( object ):
                 self.arbmult[coins]=({"long": "others", "short": winner})
             else:
                 self.arbmult[coins]=({"long": winner, "short": "others"})
-            print(self.arbmult)
+            
                 
             extraPrint(False, 'shorting n longing')
         extraPrint(False, self.arbmult)
@@ -796,6 +796,20 @@ class MarketMaker( object ):
         print   (    'Actual initial margin across all accounts: ' + str(self.IM) + '% and leverage is ' + str(round(self.LEV * 1000)/1000) + 'x')
         print   (    'Lev max short BTC: ' + str(round(self.LEV_LIM_SHORT['BTC'] * 1000) / 1000) + ' and long: ' + str(round(self.LEV_LIM_LONG['BTC'] * 1000) / 1000) + ' and percent of BTC in position out of max for short, then long: ' + str(round(self.LEV / self.LEV_LIM_SHORT['BTC'] * 1000) / 1000) + '%, ' + str(round(self.LEV / self.LEV_LIM_LONG['BTC'] * 1000) / 1000) + '%') 
         print   (    'Lev max short ETH: ' + str(round(self.LEV_LIM_SHORT['ETH'] * 1000) / 1000) + ' and long: ' + str(round(self.LEV_LIM_LONG['ETH'] * 1000) / 1000) + ' and percent of BTC in position out of max for short, then long: ' + str(round(self.LEV / self.LEV_LIM_SHORT['ETH'] * 1000) / 1000) + '%, ' + str(round(self.LEV / self.LEV_LIM_LONG['ETH'] * 1000) / 1000) + '%') 
+        string = "\n"
+        if self.arbmult['BTC']['short'] != 'others':
+
+            string = string +   (  'We\'re presently shorting BTC on: ' + self.arbmult['BTC']['short'])
+        else:
+            string = string +   (  'We\'re presently longing BTC on: ' + self.arbmult['BTC']['long'])
+
+        if self.arbmult['ETH']['short'] != 'others':
+
+            string = string +   (  ' and now shorting ETH on: ' + self.arbmult['ETH']['short'])
+        else:
+            string = string +   (  ' and now longing ETH on: ' + self.arbmult['ETH']['long'])
+        string = string + ' (and doing the opposite on the other two exchanges)'
+        print(string)    
         print   (     '\nMean Loop Time: %s' % round( self.mean_looptime, 2 ))
 
         
