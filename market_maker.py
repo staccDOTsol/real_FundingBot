@@ -820,8 +820,8 @@ class MarketMaker( object ):
         self.IM = round(self.IM * 1000)/1000
         
         print   (    'Actual initial margin across all accounts: ' + str(self.IM) + '% and leverage is ' + str(round(self.LEV * 1000)/1000) + 'x')
-        print   (    'Lev max short BTC: ' + str(round(self.LEV_LIM_SHORT['BTC'] * 1000) / 1000) + ' and long: ' + str(round(self.LEV_LIM_LONG['BTC'] * 1000) / 1000) + ' and percent of BTC in position out of max for short, then long: ' + str(round((self.LEV / self.LEVERAGE_LIMIT_SHORT) * ((self.LEV_LIM_SHORT['BTC'] * 100)  /self.LEVERAGE_LIMIT_SHORT)* 1000) / 1000) + '%, ' + str(round((self.LEV / self.LEVERAGE_LIMIT_LONG )* ((self.LEV_LIM_LONG['BTC'] * 100) /self.LEVERAGE_LIMIT_LONG)* 1000) / 1000) + '%') 
-        print   (    'Lev max short ETH: ' + str(round(self.LEV_LIM_SHORT['ETH'] * 1000) / 1000) + ' and long: ' + str(round(self.LEV_LIM_LONG['ETH'] * 1000) / 1000) + ' and percent of ETH in position out of max for short, then long: ' + str(round((self.LEV /self.LEVERAGE_LIMIT_SHORT) * ((self.LEV_LIM_SHORT['ETH'] * 100) /self.LEVERAGE_LIMIT_SHORT) * 1000) / 1000) + '%, ' + str(round((self.LEV / self.LEVERAGE_LIMIT_LONG )* ((self.LEV_LIM_LONG['ETH'] * 100) /self.LEVERAGE_LIMIT_LONG)* 1000) / 1000) + '%') 
+        print   (    'Lev max short BTC: ' + str(round(self.LEV_LIM_SHORT['BTC'] * 1000) / 1000) + ' and long: ' + str(round(self.LEV_LIM_LONG['BTC'] * 1000) / 1000) + ' and percent of BTC in position out of max for short, then long: ' + str(round((a / self.equity_usd) / self.LEV_LIM_SHORT['BTC'] * 1000 ) / 10)+ '%, ' + str(round((a / self.equity_usd) / self.LEV_LIM_LONG['BTC'] * 1000 ) / 10) + '%') 
+        print   (    'Lev max short ETH: ' + str(round(self.LEV_LIM_SHORT['ETH'] * 1000) / 1000) + ' and long: ' + str(round(self.LEV_LIM_LONG['ETH'] * 1000) / 1000) + ' and percent of ETH in position out of max for short, then long: ' + str(round((ae / self.equity_usd) / self.LEV_LIM_SHORT['ETH'] * 1000 ) / 10) + '%, ' + str(round((ae / self.equity_usd) / self.LEV_LIM_LONG['ETH'] * 1000 ) / 10) + '%') 
         string = "\n"
         if self.arbmult['BTC']['short'] != 'others':
 
@@ -889,14 +889,29 @@ class MarketMaker( object ):
         #    nasks = 0
         extraPrint(False, self.LEV)
         extraPrint(False, self.LEV_LIM_LONG[token])
-        if (self.LEV / self.LEVERAGE_LIMIT_LONG )* ((self.LEV_LIM_LONG['ETH'] * 100) /self.LEVERAGE_LIMIT_LONG) > 50:
-        
-            place_bids = False
-            nbids = 0
-        if (self.LEV / self.LEVERAGE_LIMIT_SHORT )* ((self.LEV_LIM_SHORT['ETH'] * 100) /self.LEVERAGE_LIMIT_SHORT) > 50:
-            place_asks = False
-            nasks = 0
-    
+        for pos in self.positions:
+            a = 0
+            ae = 0
+            if 'ETH' in pos:
+                ae = ae + math.fabs(self.positions[pos]['size'])
+            else:
+                a = a + math.fabs(self.positions[pos]['size'])
+        if 'ETH' in token:
+            if (((ae / self.equity_usd) / self.LEV_LIM_LONG['ETH'] * 1000 ) / 10) > 100:
+            
+                place_bids = False
+                nbids = 0
+            if (((ae / self.equity_usd) / self.LEV_LIM_SHORT['ETH'] * 1000 ) / 10) > 100:
+                place_asks = False
+                nasks = 0
+        else:
+            if (((a / self.equity_usd) / self.LEV_LIM_LONG['BTC'] * 1000 ) / 10) > 100:
+            
+                place_bids = False
+                nbids = 0
+            if (((a / self.equity_usd) / self.LEV_LIM_SHORT['BTC'] * 1000 ) / 10) > 100:
+                place_asks = False
+                nasks = 0
         min_order_size_btc = MIN_ORDER_SIZE / spot
         # 18 / (7000) 0.02571428571428571428571428571429
         # 22 / (7000) 0.00314285714285714285714285714286
