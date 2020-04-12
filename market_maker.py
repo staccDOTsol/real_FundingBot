@@ -101,8 +101,8 @@ parser.add_argument( '--no-restart',
 
 args    = parser.parse_args()
 
-KEY     = "7x5cttEC"#"VC4d7Pj1"
-SECRET  = "h_xxD-huOZOyNWouHh_yQnRyMkKyQyUv-EX96ReUHmM"#"IB4VEP26OzTNUt4JhNILOW9aDuzctbGs_K6izxQG2dI"
+KEY     = "ucHSZZg7"#"VC4d7Pj1"
+SECRET  = "EsKQSyuuuuiA3daw_RCeIkE5GMbj1XD-vXXQpq4bppA"#"IB4VEP26OzTNUt4JhNILOW9aDuzctbGs_K6izxQG2dI"
 
 
 
@@ -117,7 +117,7 @@ CONTRACT_SIZE       = 10        # USD
 COV_RETURN_CAP      = 100       # cap on variance for vol estimate
 DECAY_PCT_LIM       = 0.1       # position lim decay factor toward expiry
 LOG_LEVEL           = logging.INFO
-MIN_ORDER_SIZE      = 24
+MIN_ORDER_SIZE      = 71
 MAX_LAYERS          =  1        # max orders to layer the ob with on each side
 MKT_IMPACT          =  0.5      # base 1-sided spread between bid/offer
 PCT                 = 100 * BP  # one percentage point
@@ -141,6 +141,9 @@ conn = Deribit()
 class MarketMaker( object ):
     
     def __init__( self, monitor = True, output = True ):
+
+        self.iask = {}
+        self.ibid = {}
         self.app = Deribit(client_id=KEY, client_secret=SECRET, testnet=False, auth_type=AuthType.CREDENTIALS,
               get_id=lambda: str(uuid4()))
         self.app.on_connect_ws = self.start_credential
@@ -168,16 +171,16 @@ class MarketMaker( object ):
         self.MAX_SKEW = MIN_ORDER_SIZE * 2.5
         self.MAX_SKEW_OLD = MIN_ORDER_SIZE * 2.5
 
-        self.bit  = bybit.bybit(test=False, api_key="wbNMbu0aTQ7SxqZe58", api_secret="wel8qs4aXR0ytJ3s4zS3AKgCcPUblCVKQFVB")
+        self.bit  = bybit.bybit(test=False, api_key="tGLSF3rwSDkk8ScWym", api_secret="fm4zTEhKBrcTetQWK0v5fNzxazsTy9d6ANKn")
         self.bitws = BybitWebsocket(wsURL="wss://stream.bybit.com/realtime",
-                                 api_key="wbNMbu0aTQ7SxqZe58", api_secret="wel8qs4aXR0ytJ3s4zS3AKgCcPUblCVKQFVB")
+                                 api_key="tGLSF3rwSDkk8ScWym", api_secret="fm4zTEhKBrcTetQWK0v5fNzxazsTy9d6ANKn")
 
         self.bitws.subscribe_order()
 
         self.bitws.subscribe_execution()
         self.bitws.subscribe_position()
         extraPrint(False, dir(bitmex))
-        self.mex = bitmex.bitmex(test=False, api_key="hYWO6-TaiH-FC5kDGUTGP-hO", api_secret="Cz92m7jRam3JTWHQZwiIKWUcSl5jvexquXldAM79kWmRzqvW")
+        self.mex = bitmex.bitmex(test=False, api_key="sGHr0ll5Nma3kfpLc9Y6ulFZ", api_secret="s7AZmA4mHBaH4leAsQjRUCdy_Z-VnHRWIF1B75rm6oRMeQOs")
 
         self.bals = {}
         self.ethrate = None
@@ -217,7 +220,8 @@ class MarketMaker( object ):
         self.len_bid_ords = {}
         self.len_ask_ords = {}
 
-
+        self.oldt = 0
+        self.oldte = 0
         self.ccxt = None
         self.mexfundingfirst = True
         self.t = 0
@@ -811,10 +815,11 @@ class MarketMaker( object ):
                 t = t + self.positions[pos]['size']
             print   (    pos + ': ' + str( self.positions[pos]['size']))
             usd = usd + self.positions[pos]['size']
-        self.oldt = t
-        self.oldte = te
+        
         diff = t - self.oldt
         diffe = te - self.oldte
+        self.oldt = t
+        self.oldte = te
         print   (    '\nNet delta (exposure) BTC: $' + str(t) + ', difference since last status output: ' + str(diff))
         print   (    'Net delta (exposure) ETH: $' + str(te) + ', difference since last status output: ' + str(diffe))
         print   (    'Total absolute delta (IM exposure) BTC: $' + str(a))
@@ -827,8 +832,8 @@ class MarketMaker( object ):
         self.IM = round(self.IM * 1000)/1000
         
         print   (    'Actual initial margin across all accounts: ' + str(self.IM) + '% and leverage is ' + str(round(self.LEV * 1000)/1000) + 'x')
-        print   (    'Lev max short BTC: ' + str(round(self.LEV_LIM_SHORT['BTC'] * 1000) / 1000) + ' and long: ' + str(round(self.LEV_LIM_LONG['BTC'] * 1000) / 1000) + ' and percent of BTC in position out of max for short, then long: ' + str(round((a / self.equity_usd) / self.LEV_LIM_SHORT['BTC'] * 1000 ) / 10)+ '%, ' + str(round((a / self.equity_usd) / self.LEV_LIM_LONG['BTC'] * 1000 ) / 10) + '%') 
-        print   (    'Lev max short ETH: ' + str(round(self.LEV_LIM_SHORT['ETH'] * 1000) / 1000) + ' and long: ' + str(round(self.LEV_LIM_LONG['ETH'] * 1000) / 1000) + ' and percent of ETH in position out of max for short, then long: ' + str(round((ae / self.equity_usd) / self.LEV_LIM_SHORT['ETH'] * 1000 ) / 10) + '%, ' + str(round((ae / self.equity_usd) / self.LEV_LIM_LONG['ETH'] * 1000 ) / 10) + '%') 
+        print   (    'Lev max short BTC: ' + str(round(self.LEV_LIM_SHORT['BTC'] * 1000) / 1000) + ' and long: ' + str(round(self.LEV_LIM_LONG['BTC'] * 1000) / 1000) + ' and percent of BTC in position out of max for short, then long: ' + str(round((a / self.equity_usd) / self.LEV_LIM_SHORT['BTC'] * 2000 ) / 10)+ '%, ' + str(round((a / self.equity_usd) / self.LEV_LIM_LONG['BTC'] * 2000 ) / 10) + '%') 
+        print   (    'Lev max short ETH: ' + str(round(self.LEV_LIM_SHORT['ETH'] * 1000) / 1000) + ' and long: ' + str(round(self.LEV_LIM_LONG['ETH'] * 1000) / 1000) + ' and percent of ETH in position out of max for short, then long: ' + str(round((ae / self.equity_usd) / self.LEV_LIM_SHORT['ETH'] * 2000 ) / 10) + '%, ' + str(round((ae / self.equity_usd) / self.LEV_LIM_LONG['ETH'] * 2000 ) / 10) + '%') 
         string = "\n"
         if self.arbmult['BTC']['short'] != 'others':
 
@@ -864,6 +869,9 @@ class MarketMaker( object ):
         if ex == 'deribit':
             try:
                 ords        = self.client.getopenorders( fut )
+                
+                for o in ords:
+                    o['orderID'] = o['orderId']    
                 self.bid_ords[self.futtoks[token][ex]]        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
                 
                 self.ask_ords[self.futtoks[token][ex]]        = [ o for o in ords if o[ 'direction' ] == 'sell' ]
@@ -874,11 +882,12 @@ class MarketMaker( object ):
         if ex == 'bybit':
             try:
                 ords2 = []
-                ords = self.bit.Order.Order_getOrders(order="true",symbol=self.futtoks[token]['bybit'], order_status='New').result()[0]['result']
+                ords = self.bit.Order.Order_getOrders(order="true",symbol=self.futtoks[token]['bybit'].replace('-bybit', ''), order_status='New').result()[0]['result']
                 if 'data' in ords:
                     ords = ords['data']
                     for order in ords:
                         ords2.append(order)
+                        order['orderID'] = order['order_id']
                     self.bid_ords[self.futtoks[token][ex]]        = [ o for o in ords2 if o[ 'side' ] == 'Buy'  ]
                 
                     self.ask_ords[self.futtoks[token][ex]]        = [ o for o in ords2 if o[ 'side' ] == 'Sell' ]
@@ -902,18 +911,20 @@ class MarketMaker( object ):
                 ords1 = self.mex.Order.Order_getOrders(symbol=fut, reverse=True, count=500).result()[0]
                 ords = []
                 for order in ords1:
-                    for order in ords:
-                        if 'orderId' in order:
-                            order['orderID'] = order['orderId']
-                    if order['ordStatus'].lower() == 'new':
-                        ords.append(order)
+                    for order2 in order:
+                        if 'orderId' in order2:
+                            order2['orderID'] = order2['orderId']
+                        if order2['ordStatus'].lower() == 'new':
+                            ords.append(order2)
             self.bid_ords[self.futtoks[token][ex]]        = [ o for o in ords if o[ 'side' ] == 'Buy'  ]
             
             self.ask_ords[self.futtoks[token][ex]]        = [ o for o in ords if o[ 'side' ] == 'Sell' ]
         if self.futtoks[token][ex] in self.bid_ords:
             self.len_bid_ords[self.futtoks[token][ex]]    = ( len( self.bid_ords[self.futtoks[token][ex]] ) )
+            self.ibid[self.futtoks[token][ex]] = self.len_bid_ords[self.futtoks[token][ex]] - 1
         if self.futtoks[token][ex] in self.ask_ords:
             self.len_ask_ords[self.futtoks[token][ex]]    = ( len( self.ask_ords[self.futtoks[token][ex]] ) )
+            self.iask[self.futtoks[token][ex]] = self.len_ask_ords[self.futtoks[token][ex]] - 1
         asks = []
         bids = []
         
@@ -966,19 +977,19 @@ class MarketMaker( object ):
             else:
                 a = a + math.fabs(self.positions[pos]['size'])
         if 'ETH' in token:
-            if (((ae / self.equity_usd) / self.LEV_LIM_LONG['ETH'] * 1000 ) / 10) > 100:
+            if (((ae / self.equity_usd) / self.LEV_LIM_LONG['ETH'] * 2000 ) / 10) > 100:
             
                 place_bids = False
                 nbids = 0
-            if (((ae / self.equity_usd) / self.LEV_LIM_SHORT['ETH'] * 1000 ) / 10) > 100:
+            if (((ae / self.equity_usd) / self.LEV_LIM_SHORT['ETH'] * 2000 ) / 10) > 100:
                 place_asks = False
                 nasks = 0
         else:
-            if (((a / self.equity_usd) / self.LEV_LIM_LONG['BTC'] * 1000 ) / 10) > 100:
+            if (((a / self.equity_usd) / self.LEV_LIM_LONG['BTC'] * 2000 ) / 10) > 100:
             
                 place_bids = False
                 nbids = 0
-            if (((a / self.equity_usd) / self.LEV_LIM_SHORT['BTC'] * 1000 ) / 10) > 100:
+            if (((a / self.equity_usd) / self.LEV_LIM_SHORT['BTC'] * 2000 ) / 10) > 100:
                 place_asks = False
                 nasks = 0
         min_order_size_btc = MIN_ORDER_SIZE / spot
@@ -994,7 +1005,6 @@ class MarketMaker( object ):
             token = 'BTC'
             if 'ETH' in fut:
                 token = 'ETH'
-            i = 0
             try:
                 prc = self.get_bbo(ex, fut)['bid']
             except Exception as e:
@@ -1003,43 +1013,59 @@ class MarketMaker( object ):
             qty = round ( float(prc) * qtybtc )
             if qty > self.maxqty:
                 self.maxqty = qty
-            
+            skew_size = {}
+            skew_size['ETH'] = 0
+            skew_size['BTC'] = 0
+            for k in self.positions:
+                if 'ETH' in k:
+                    skew_size['ETH'] = skew_size['ETH'] + self.positions[k]['size']
+                else:
+                    skew_size['BTC'] = skew_size['BTC'] + self.positions[k]['size']
+
+            self.MAX_SKEW = self.MAX_SKEW_OLD
+            self.MAX_SKEW = qty * 1.5
             extraPrint(False, token + ', ' + ex + ' qty: ' + str(qty))
             qty = round(qty)
-            if self.positions[fut]['size'] > 15:
+            if self.positions[fut]['size'] >= 0:
                 #print('sell over max')
 
                 if ex == 'bitmex':
                     if  self.len_ask_ords[self.futtoks[token]['bitmex']] == 0:
-                        self.mex.Order( self.futtoks[token]['bitmex'], qty, orderQty=-1 * qty, price=self.get_bbo('bitmex', fut)['ask'],execInst="ParticipateDoNotInitiate").result()
-     
+                        if qty + skew_size[token] * -1 <  self.MAX_SKEW:
+                            r = self.mex.Order.Order_new(symbol=self.futtoks[token]['bitmex'], orderQty=-1 * qty, price=self.get_bbo('bitmex', self.futtoks[token]['bitmex'])['ask'],execInst="ParticipateDoNotInitiate").result()
+                        #print(r)
                 if ex == 'deribit':
-                    if 'BTC' in fut:
+                    if 'BTC' in self.futtoks[token]['deribit']:
                         qty = qty / 10
                     if  self.len_ask_ords[self.futtoks[token]['deribit']] == 0:
-                        self.client.sell( self.futtoks[token]['deribit'], qty, self.get_bbo('deribit', fut)['ask'], 'true' )
+                        if qty + skew_size[token] * -1 <  self.MAX_SKEW:
+                            self.client.sell( self.futtoks[token]['deribit'], qty, self.get_bbo('deribit', self.futtoks[token]['deribit'])['ask'], 'true' )
                 if ex == 'bybit':
-                    print(self.len_ask_ords)
-                    print(self.len_ask_ords[self.futtoks[token]['bybit']])
+                    #print(self.len_ask_ords)
+                    #print(self.len_ask_ords[self.futtoks[token]['bybit']])
                     if  self.len_ask_ords[self.futtoks[token]['bybit']] == 0:
-                        self.bit.Order.Order_new(side="Sell",symbol=self.futtoks[token]['bybit'],order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['ask'],time_in_force="PostOnly").result()
+                        if qty + skew_size[token] * -1 <  self.MAX_SKEW:
+                            self.bit.Order.Order_new(side="Sell",symbol=self.futtoks[token]['bybit'].replace('-bybit', ''),order_type="Limit",qty=qty,price=self.get_bbo('bybit', self.futtoks[token]['bybit'])['ask'],time_in_force="PostOnly").result()
                   
 
-            if self.positions[fut]['size'] < -15:
+            if self.positions[fut]['size'] <= 0:
                 #print('buy over max')
                 if ex == 'bitmex':
                     if  self.len_bid_ords[self.futtoks[token]['bitmex']] == 0:
-                        self.mex.Order( self.futtoks[token]['bitmex'], qty, orderQty=qty, price=self.get_bbo('bitmex', fut)['bid'],execInst="ParticipateDoNotInitiate").result()
-     
+                        if qty + skew_size[token] < self.MAX_SKEW:
+                            r = self.mex.Order.Order_new(symbol=self.futtoks[token]['bitmex'], orderQty=qty, price=self.get_bbo('bitmex', self.futtoks[token]['bitmex'])['bid'],execInst="ParticipateDoNotInitiate").result()
+                        #print(r)
                 if ex == 'deribit':
 
-                    if 'BTC' in fut:
+                    if 'BTC' in self.futtoks[token]['deribit']:
                         qty = qty / 10
                     if  self.len_bid_ords[self.futtoks[token]['deribit']] == 0:
-                        self.client.buy( self.futtoks[token]['deribit'], qty, self.get_bbo('deribit', fut)['bid'], 'true' )
+                        if qty + skew_size[token] < self.MAX_SKEW:
+                            self.client.buy( self.futtoks[token]['deribit'], qty, self.get_bbo('deribit', self.futtoks[token]['deribit'])['bid'], 'true' )
                 if ex == 'bybit':
                     if  self.len_bid_ords[self.futtoks[token]['bybit']] == 0:
-                        self.bit.Order.Order_new(side="Buy",symbol=self.futtoks[token]['bybit'],order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['bid'],time_in_force="PostOnly").result()
+                        if qty + skew_size[token] < self.MAX_SKEW:
+                            self.bit.Order.Order_new(side="Buy",symbol=self.futtoks[token]['bybit'].replace('-bybit', ''),order_type="Limit",qty=qty,price=self.get_bbo('bybit', self.futtoks[token]['bybit'])['bid'],time_in_force="PostOnly").result()
                   
 
             
@@ -1097,7 +1123,6 @@ class MarketMaker( object ):
         token = 'BTC'
         if 'ETH' in fut:
             token = 'ETH'
-        i = 0
         try:
             prc = self.get_bbo(ex, fut)['bid']
         except Exception as e:
@@ -1112,11 +1137,6 @@ class MarketMaker( object ):
         self.MAX_SKEW = self.MAX_SKEW_OLD
         self.MAX_SKEW = qty * 1.5
 
-        for k in self.positions:
-            if 'ETH' in k:
-                skew_size['ETH'] = skew_size['ETH'] + self.positions[k]['size']
-            else:
-                skew_size['BTC'] = skew_size['BTC'] + self.positions[k]['size']
         if  place_asks== False or place_bids == False:
             extraPrint(False, 'bids/asks false ' + ex + ', size: ' + str(self.positions[fut]['size'] ))
             
@@ -1125,44 +1145,44 @@ class MarketMaker( object ):
                 if qty + skew_size[token] * -1 <  self.MAX_SKEW:
                     if ex == 'deribit':
                         qty2 = qty
-                        if 'BTC' in fut:
+                        if 'BTC' in self.futtoks[token]['deribit']:
                             qty2 = round(qty / 10)
                             extraPrint(False, fut + ' DERIBIT TRADE! ' + str(qty2))
                         if  self.len_ask_ords[self.futtoks[token]['deribit']] == 0:
-                            self.client.sell( self.futtoks[token]['deribit'], qty2, self.get_bbo('deribit', fut)['ask'], 'true' )
+                            self.client.sell( self.futtoks[token]['deribit'], qty2, self.get_bbo('deribit', self.futtoks[token]['deribit'])['ask'], 'true' )
 
                     if ex == 'bybit':
-                        print(self.len_ask_ords)
-                        print(self.len_ask_ords[self.futtoks[token]['bybit']])
+                        #print(self.len_ask_ords)
+                        #print(self.len_ask_ords[self.futtoks[token]['bybit']])
                         if  self.len_ask_ords[self.futtoks[token]['bybit']] == 0:
                             
-                            self.bit.Order.Order_new(side="Sell",symbol=self.futtoks[token]['bybit'],order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['ask'],time_in_force="PostOnly").result()
+                            self.bit.Order.Order_new(side="Sell",symbol=self.futtoks[token]['bybit'].replace('-bybit', ''),order_type="Limit",qty=qty,price=self.get_bbo('bybit', self.futtoks[token]['bybit'])['ask'],time_in_force="PostOnly").result()
                   
                     if ex == 'bitmex':
                         sleep(0.1)
                         if  self.len_ask_ords[self.futtoks[token]['bitmex']] == 0:
-                            self.mex.Order( self.futtoks[token]['bitmex'], qty, orderQty=-1 * qty, price=self.get_bbo('bitmex', fut)['ask'],execInst="ParticipateDoNotInitiate").result()
+                            self.mex.Order.Order_new(symbol=self.futtoks[token]['bitmex'], orderQty=-1 * qty, price=self.get_bbo('bitmex', self.futtoks[token]['bitmex'])['ask'],execInst="ParticipateDoNotInitiate").result()
      
             if self.positions[fut]['size'] > 0:
                 # buy
                 if qty + skew_size[token] < self.MAX_SKEW:
                     if ex == 'deribit':
                         qty2 = qty
-                        if 'BTC' in fut:
+                        if 'BTC' in self.futtoks[token]['deribit']:
                             qty2 = round(qty / 10)
                             extraPrint(False, fut + ' DERIBIT TRADE! ' + str(qty2))
                         if  self.len_bid_ords[self.futtoks[token]['deribit']] == 0:
-                            self.client.buy( self.futtoks[token]['deribit'], qty2, self.get_bbo('deribit', fut)['bid'], 'true' )
+                            self.client.buy( self.futtoks[token]['deribit'], qty2, self.get_bbo('deribit', self.futtoks[token]['deribit'])['bid'], 'true' )
 
                     if ex == 'bybit':
                         if  self.len_bid_ords[self.futtoks[token]['bybit']] == 0:
-                            self.bit.Order.Order_new(side="Buy",symbol=self.futtoks[token]['bybit'],order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['bid'],time_in_force="PostOnly").result()
+                            self.bit.Order.Order_new(side="Buy",symbol=self.futtoks[token]['bybit'].replace('-bybit', ''),order_type="Limit",qty=qty,price=self.get_bbo('bybit', self.futtoks[token]['bybit'])['bid'],time_in_force="PostOnly").result()
         
 
                     if ex == 'bitmex':
                         sleep(0.1)
                         if  self.len_bid_ords[self.futtoks[token]['bitmex']] == 0:
-                            self.mex.Order( self.futtoks[token]['bitmex'], qty, orderQty=qty, price=self.get_bbo('bitmex', fut)['bid'],execInst="ParticipateDoNotInitiate").result()
+                            self.mex.Order.Order_new(symbol=self.futtoks[token]['bitmex'], orderQty=qty, price=self.get_bbo('bitmex', self.futtoks[token]['bitmex'])['bid'],execInst="ParticipateDoNotInitiate").result()
      
 
         extraPrint(False, 'skew_size[token]: ' + str(skew_size[token]))
@@ -1176,9 +1196,10 @@ class MarketMaker( object ):
             return
         # bid edit
         try:
-            if i >= 0:
+            if self.ibid[self.futtoks[token][ex]] >= 0:
              
-                oid = self.bid_ords[self.futtoks[token][ex]][ i ][ 'orderID' ]
+                oid = self.bid_ords[self.futtoks[token][ex]][ self.ibid[self.futtoks[token][ex]] ][ 'orderID' ]
+                self.ibid[self.futtoks[token][ex]] = self.ibid[self.futtoks[token][ex]] - 1
                 try:
                     if ex == 'deribit':
                         self.client.edit( oid, qty, prc )
@@ -1194,7 +1215,8 @@ class MarketMaker( object ):
 
                     extraPrint(False, e)
         except Exception as e:
-                abc=123#extraPrint(False, e)
+            print(e)
+            abc=123#extraPrint(False, e)
         # ask edit
         try:
             prc = self.get_bbo(ex, fut)['ask']
@@ -1202,9 +1224,10 @@ class MarketMaker( object ):
             print('no bid, returning')
             return
         try:
-            if i >= 0:
+            if self.iask[self.futtoks[token][ex]] >= 0:
              
-                oid = self.ask_ords[self.futtoks[token][ex]][ i ][ 'orderID' ]
+                oid = self.ask_ords[self.futtoks[token][ex]][ self.iask[self.futtoks[token][ex]] ][ 'orderID' ]
+                self.iask[self.futtoks[token][ex]] = self.iask[self.futtoks[token][ex]] - 1
                 try:
                     if ex == 'deribit':
                         self.client.edit( oid, qty, prc )
@@ -1219,6 +1242,7 @@ class MarketMaker( object ):
                     abc=123#extraPrint(False, e)
                     extraPrint(False, e)
         except Exception as e:
+            print(e)
             abc=123#extraPrint(False, e)
         
         
@@ -1263,26 +1287,26 @@ class MarketMaker( object ):
                 if 'PERPETUAL' in fut and self.len_ask_ords[self.futtoks[token]['deribit']] == 0:
                 # deribit
                     qty2 = qty
-                    if 'BTC' in fut:
+                    if 'BTC' in self.futtoks[token]['deribit']:
                         qty2 = round(qty / 10)
                         extraPrint(False, fut + ' DERIBIT TRADE! ' + str(qty2))
                     if  self.len_ask_ords[self.futtoks[token]['deribit']] == 0:
-                        self.client.sell( self.futtoks[token]['deribit'], qty2, self.get_bbo('deribit', fut)['ask'], 'true' )
+                        self.client.sell( self.futtoks[token]['deribit'], qty2, self.get_bbo('deribit', self.futtoks[token]['deribit'])['ask'], 'true' )
                 if 'XBT' in fut or fut == 'ETHUSD':
                 # mex
                     sleep(0.1)
                     if  self.len_ask_ords[self.futtoks[token]['bitmex']] == 0:
-                        self.mex.Order( self.futtoks[token]['bitmex'], qty, orderQty=-1 * qty, price=self.get_bbo('bitmex', fut)['ask'],execInst="ParticipateDoNotInitiate").result()
+                        self.mex.Order.Order_new(symbol=self.futtoks[token]['bitmex'], orderQty=-1 * qty, price=self.get_bbo('bitmex', self.futtoks[token]['bitmex'])['ask'],execInst="ParticipateDoNotInitiate").result()
      
                 if 'bybit' in fut or 'BTCUSD' == fut:
                 # bybit
-                    print(self.len_ask_ords)
-                    print(self.len_ask_ords[self.futtoks[token]['bybit']])
-                    
+                    #print(self.len_ask_ords)
+                    #print(self.len_ask_ords[self.futtoks[token]['bybit']])
+
                     if  self.len_ask_ords[self.futtoks[token]['bybit']] == 0:
 
                         
-                        self.bit.Order.Order_new(side="Sell",symbol=self.futtoks[token]['bybit'],order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['ask'],time_in_force="PostOnly").result()
+                        self.bit.Order.Order_new(side="Sell",symbol=self.futtoks[token]['bybit'].replace('-bybit', ''),order_type="Limit",qty=qty,price=self.get_bbo('bybit', self.futtoks[token]['bybit'])['ask'],time_in_force="PostOnly").result()
                   
                 
     # long reduce
@@ -1291,22 +1315,22 @@ class MarketMaker( object ):
                 if 'PERPETUAL' in fut:
                 # deribit
                     qty2 = qty
-                    if 'BTC' in fut:
+                    if 'BTC' in self.futtoks[token]['deribit']:
                         qty2 = round(qty / 10)
                         extraPrint(False, fut + ' DERIBIT TRADE! ' + str(qty2))
                     if  self.len_bid_ords[self.futtoks[token]['deribit']] == 0:
-                        self.client.buy( self.futtoks[token]['deribit'], qty2, self.get_bbo('deribit', fut)['bid'], 'true' )
+                        self.client.buy( self.futtoks[token]['deribit'], qty2, self.get_bbo('deribit', self.futtoks[token]['deribit'])['bid'], 'true' )
                 if 'XBT' in fut or fut == 'ETHUSD':
                 # mex
 
                     sleep(0.1)
                     if  self.len_bid_ords[self.futtoks[token]['bitmex']] == 0:
-                        self.mex.Order( self.futtoks[token]['bitmex'], qty, orderQty=qty, price=self.get_bbo('bitmex', fut)['bid'],execInst="ParticipateDoNotInitiate").result()
+                        self.mex.Order.Order_new(symbol=self.futtoks[token]['bitmex'], orderQty=qty, price=self.get_bbo('bitmex', self.futtoks[token]['bitmex'])['bid'],execInst="ParticipateDoNotInitiate").result()
      
                 if 'bybit' in fut or 'BTCUSD' == fut:
                 # bybit
                     if  self.len_bid_ords[self.futtoks[token]['bybit']] == 0:
-                        self.bit.Order.Order_new(side="Buy",symbol=self.futtoks[token]['bybit'],order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['bid'],time_in_force="PostOnly").result()
+                        self.bit.Order.Order_new(side="Buy",symbol=self.futtoks[token]['bybit'].replace('-bybit', ''),order_type="Limit",qty=qty,price=self.get_bbo('bybit', self.futtoks[token]['bybit'])['bid'],time_in_force="PostOnly").result()
         
                                     
     # Long add on winning ex, short other ex - or rather 
@@ -1320,25 +1344,25 @@ class MarketMaker( object ):
                     if qty + skew_size[token] < self.MAX_SKEW and place_bids == True:
                         afut = fut
                         qty2 = qty
-                        if 'BTC' in fut:
+                        if 'BTC' in self.futtoks[token]['deribit']:
                             qty2 = round(qty / 10)
                             extraPrint(False, fut + ' DERIBIT TRADE! ' + str(qty2))
                         if  self.len_bid_ords[self.futtoks[token]['deribit']] == 0:
-                            self.client.buy( self.futtoks[token]['deribit'], qty2, self.get_bbo('deribit', fut)['bid'], 'true' )
+                            self.client.buy( self.futtoks[token]['deribit'], qty2, self.get_bbo('deribit', self.futtoks[token]['deribit'])['bid'], 'true' )
                 for fut in self.futures['bybit']:
                     if qty + skew_size[token] * -1 <  self.MAX_SKEW:
-                         print(self.len_ask_ords)
-                         print(self.len_ask_ords[self.futtoks[token]['bybit']])
+                         #print(self.len_ask_ords)
+                         #print(self.len_ask_ords[self.futtoks[token]['bybit']])
                          if  self.len_ask_ords[self.futtoks[token]['bybit']] == 0:
 
                             
-                            r = self.bit.Order.Order_new(side="Sell",symbol=self.futtoks[token]['bybit'],order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['ask'],time_in_force="PostOnly").result()
-                         extraPrint(False, r) 
+                            r = self.bit.Order.Order_new(side="Sell",symbol=self.futtoks[token]['bybit'].replace('-bybit', ''),order_type="Limit",qty=qty,price=self.get_bbo('bybit', self.futtoks[token]['bybit'])['ask'],time_in_force="PostOnly").result()
+                         #extraPrint(False, r) 
                          if afut != "":
                             if math.fabs(self.positions[fut]['size']) >= 100 and math.fabs(self.positions[fut]['size']) > 1.33 * math.fabs(self.positions[afut]['size']):
                                 extraPrint(False, 'reduced at a profit too much! We must now lose!')
-                                if  self.len_bid_ords[self.futtoks[token]['bybit']] == 0:
-                                    r = self.bit.Order.Order_new(side="Buy",symbol=self.futtoks[token]['bybit'],order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['bid'],time_in_force="PostOnly").result()
+                                if  self.len_bid_ords[self.futtoks[token]['bybit']] == 0 qty + skew_size[token] <  -1 * self.MAX_SKEW:
+                                    r = self.bit.Order.Order_new(side="Buy",symbol=self.futtoks[token]['bybit'].replace('-bybit', ''),order_type="Limit",qty=qty,price=self.get_bbo('bybit', self.futtoks[token]['bybit'])['bid'],time_in_force="PostOnly").result()
                          
                 if token == 'BTC':
                     fut = 'XBTUSD'
@@ -1346,14 +1370,14 @@ class MarketMaker( object ):
                     fut = 'ETHUSD'
                 if qty + skew_size[token] * -1 <  self.MAX_SKEW:
                     if  self.len_ask_ords[self.futtoks[token]['bitmex']] == 0:
-                        self.mex.Order( self.futtoks[token]['bitmex'], qty, orderQty=-1 * qty, price=self.get_bbo('bitmex', fut)['ask'],execInst="ParticipateDoNotInitiate").result()
+                        self.mex.Order.Order_new(symbol=self.futtoks[token]['bitmex'], orderQty=-1 * qty, price=self.get_bbo('bitmex', self.futtoks[token]['bitmex'])['ask'],execInst="ParticipateDoNotInitiate").result()
                     if afut != "":
                         if math.fabs(self.positions[fut]['size']) >= 100 and math.fabs(self.positions[fut]['size']) > 1.33 * math.fabs(self.positions[afut]['size']):
                             extraPrint(False, 'reduced at a profit too much! We must now lose!')
                             
                             sleep(0.1)
-                            if  self.len_bid_ords[self.futtoks[token]['bitmex']] == 0:
-                                self.mex.Order( self.futtoks[token]['bitmex'], qty, orderQty=qty, price=self.get_bbo('bitmex', fut)['bid'],execInst="ParticipateDoNotInitiate").result()
+                            if  self.len_bid_ords[self.futtoks[token]['bitmex']] == 0 and qty + skew_size[token] <  -1 * self.MAX_SKEW:
+                                self.mex.Order.Order_new(symbol=self.futtoks[token]['bitmex'], orderQty=qty, price=self.get_bbo('bitmex', self.futtoks[token]['bitmex'])['bid'],execInst="ParticipateDoNotInitiate").result()
                     
      
             if ex == 'bybit':
@@ -1363,27 +1387,27 @@ class MarketMaker( object ):
                         
                         afut = fut
                         if  self.len_bid_ords[self.futtoks[token]['bybit']] == 0:
-                            r = self.bit.Order.Order_new(side="Buy",symbol=self.futtoks[token]['bybit'],order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['bid'],time_in_force="PostOnly").result()
-                        extraPrint(False, r)
+                            r = self.bit.Order.Order_new(side="Buy",symbol=self.futtoks[token]['bybit'].replace('-bybit', ''),order_type="Limit",qty=qty,price=self.get_bbo('bybit', self.futtoks[token]['bybit'])['bid'],time_in_force="PostOnly").result()
+                        #extraPrint(False, r)
                 for fut in self.futures['deribit']:
 
                     if qty + skew_size[token] * -1 <  self.MAX_SKEW:
                         
                         qty2 = qty
-                        if 'BTC' in fut:
+                        if 'BTC' in self.futtoks[token]['deribit']:
                             qty2 = round(qty / 10)
                             extraPrint(False, fut + ' DERIBIT TRADE! ' + str(qty2))
                         if  self.len_ask_ords[self.futtoks[token]['deribit']] == 0:
-                            self.client.sell( self.futtoks[token]['deribit'], qty2, self.get_bbo('deribit', fut)['ask'], 'true' )
+                            self.client.sell( self.futtoks[token]['deribit'], qty2, self.get_bbo('deribit', self.futtoks[token]['deribit'])['ask'], 'true' )
                         if afut != "":
                             if math.fabs(self.positions[fut]['size']) >= 100 and math.fabs(self.positions[fut]['size']) > 1.33 * math.fabs(self.positions[afut]['size']):
                                 extraPrint(False, 'reduced at a profit too much! We must now lose!')
                                 qty2 = qty
-                                if 'BTC' in fut:
+                                if 'BTC' in self.futtoks[token]['deribit']:
                                     qty2 = round(qty / 10)
                                     extraPrint(False, fut + ' DERIBIT TRADE! ' + str(qty2))
-                                if  self.len_bid_ords[self.futtoks[token]['deribit']] == 0:
-                                    self.client.buy( self.futtoks[token]['deribit'], qty2, self.get_bbo('deribit', fut)['bid'], 'true' )
+                                if  self.len_bid_ords[self.futtoks[token]['deribit']] == 0 and qty + skew_size[token] <  -1 *   self.MAX_SKEW:
+                                    self.client.buy( self.futtoks[token]['deribit'], qty2, self.get_bbo('deribit', self.futtoks[token]['deribit'])['bid'], 'true' )
                         
                 if token == 'BTC':
                     fut = 'XBTUSD'
@@ -1392,14 +1416,14 @@ class MarketMaker( object ):
                 if qty + skew_size[token] * -1 <  self.MAX_SKEW:
                     if  self.len_ask_ords[self.futtoks[token]['bitmex']] == 0:
 
-                        self.mex.Order( self.futtoks[token]['bitmex'], qty, orderQty=-1 * qty, price=self.get_bbo('bitmex', fut)['ask'],execInst="ParticipateDoNotInitiate").result()
+                        self.mex.Order.Order_new(symbol=self.futtoks[token]['bitmex'], orderQty=-1 * qty, price=self.get_bbo('bitmex', self.futtoks[token]['bitmex'])['ask'],execInst="ParticipateDoNotInitiate").result()
                     if afut != "":
                         if math.fabs(self.positions[fut]['size']) >= 100 and math.fabs(self.positions[fut]['size']) > 1.33 * math.fabs(self.positions[afut]['size']):
                             extraPrint(False, 'reduced at a profit too much! We must now lose!')
                             
                             sleep(0.1)
-                            if  self.len_bid_ords[self.futtoks[token]['bitmex']] == 0:
-                                self.mex.Order( self.futtoks[token]['bitmex'], qty, orderQty=qty, price=self.get_bbo('bitmex', fut)['bid'],execInst="ParticipateDoNotInitiate").result()
+                            if  self.len_bid_ords[self.futtoks[token]['bitmex']] == 0 and qty + skew_size[token] <  -1 * self.MAX_SKEW:
+                                self.mex.Order.Order_new(symbol=self.futtoks[token]['bitmex'], orderQty=qty, price=self.get_bbo('bitmex', self.futtoks[token]['bitmex'])['bid'],execInst="ParticipateDoNotInitiate").result()
                             
 
 
@@ -1417,39 +1441,39 @@ class MarketMaker( object ):
                         
                     extraPrint(False, 'less maxskew mex')
                     if  self.len_bid_ords[self.futtoks[token]['bitmex']] == 0:
-                        self.mex.Order( self.futtoks[token]['bitmex'], qty, orderQty=qty, price=self.get_bbo('bitmex', fut)['bid'],execInst="ParticipateDoNotInitiate").result()
+                        self.mex.Order.Order_new(symbol=self.futtoks[token]['bitmex'], orderQty=qty, price=self.get_bbo('bitmex', self.futtoks[token]['bitmex'])['bid'],execInst="ParticipateDoNotInitiate").result()
                     if afut != "":
                         if math.fabs(self.positions[fut]['size']) >= 100 and math.fabs(self.positions[fut]['size']) > 1.33 * math.fabs(self.positions[afut]['size']):
                             extraPrint(False, 'reduced at a profit too much! We must now lose!')
                             
                             sleep(0.1)
-                            if  self.len_ask_ords[self.futtoks[token]['bitmex']] == 0:
-                                self.mex.Order( self.futtoks[token]['bitmex'], qty, orderQty=-1*qty, price=self.get_bbo('bitmex', fut)['ask'],execInst="ParticipateDoNotInitiate").result()
+                            if  self.len_ask_ords[self.futtoks[token]['bitmex']] == 0 and qty + skew_size[token]  <  self.MAX_SKEW:
+                                self.mex.Order.Order_new(symbol=self.futtoks[token]['bitmex'], orderQty=-1*qty, price=self.get_bbo('bitmex', self.futtoks[token]['bitmex'])['ask'],execInst="ParticipateDoNotInitiate").result()
                     
                 for fut in self.futures['deribit']:
                     if qty + skew_size[token] * -1 <  self.MAX_SKEW:
                         extraPrint(False, 'tokenfut long! deribit ' + fut)
                         qty2 = qty
-                        if 'BTC' in fut:
+                        if 'BTC' in self.futtoks[token]['deribit']:
                             qty2 = round(qty / 10)
                             extraPrint(False, fut + ' DERIBIT TRADE! ' + str(qty2))
                         if  self.len_ask_ords[self.futtoks[token]['deribit']] == 0:
-                            self.client.sell( self.futtoks[token]['deribit'], qty2, self.get_bbo('deribit', fut)['ask'], 'true' )
+                            self.client.sell( self.futtoks[token]['deribit'], qty2, self.get_bbo('deribit', self.futtoks[token]['deribit'])['ask'], 'true' )
                 
                 for fut in self.futures['bybit']:
                     if qty + skew_size[token] * -1 <  self.MAX_SKEW:
                         extraPrint(False, 'tokenfut long! bybit ' + fut)
-                        print(self.len_ask_ords)
-                        print(self.len_ask_ords[self.futtoks[token]['bybit']])
+                        #print(self.len_ask_ords)
+                        #print(self.len_ask_ords[self.futtoks[token]['bybit']])
                         if  self.len_ask_ords[self.futtoks[token]['bybit']] == 0:
 
                             
-                            r = self.bit.Order.Order_new(side="Sell",symbol=self.futtoks[token]['bybit'],order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['ask'],time_in_force="PostOnly").result()
+                            r = self.bit.Order.Order_new(side="Sell",symbol=self.futtoks[token]['bybit'].replace('-bybit', ''),order_type="Limit",qty=qty,price=self.get_bbo('bybit', self.futtoks[token]['bybit'])['ask'],time_in_force="PostOnly").result()
                         if afut != "":
                             if math.fabs(self.positions[fut]['size']) >= 100 and math.fabs(self.positions[fut]['size']) > 1.33 * math.fabs(self.positions[afut]['size']):
                                 extraPrint(False, 'reduced at a profit too much! We must now lose!')
-                                if  self.len_bid_ords[self.futtoks[token]['bybit']] == 0:
-                                    r = self.bit.Order.Order_new(side="Buy",symbol=self.futtoks[token]['bybit'],order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['bid'],time_in_force="PostOnly").result()
+                                if  self.len_bid_ords[self.futtoks[token]['bybit']] == 0 and qty + skew_size[token] * -1 <  self.MAX_SKEW:
+                                    r = self.bit.Order.Order_new(side="Buy",symbol=self.futtoks[token]['bybit'].replace('-bybit', ''),order_type="Limit",qty=qty,price=self.get_bbo('bybit', self.futtoks[token]['bybit'])['bid'],time_in_force="PostOnly").result()
                     
             self.execute_cancels(ex, fut, skew_size[token],  nbids, nasks, place_bids, place_asks, bids, asks, qtybtc, con_sz, tsz, cancel_oids)
 
@@ -1473,40 +1497,40 @@ class MarketMaker( object ):
                         afut = fut
                         
                         qty2 = qty
-                        if 'BTC' in fut:
+                        if 'BTC' in self.futtoks[token]['deribit']:
                             qty2 = round(qty / 10)
                             extraPrint(False, fut + ' DERIBIT TRADE! ' + str(qty2))
                         if  self.len_ask_ords[self.futtoks[token]['deribit']] == 0:
-                            self.client.sell( self.futtoks[token]['deribit'], qty2, self.get_bbo('deribit', fut)['ask'], 'true' )
+                            self.client.sell( self.futtoks[token]['deribit'], qty2, self.get_bbo('deribit', self.futtoks[token]['deribit'])['ask'], 'true' )
                 for fut in self.futures['bybit']:
                     if qty + skew_size[token] < self.MAX_SKEW:
                         if  self.len_bid_ords[self.futtoks[token]['bybit']] == 0:
-                            r = self.bit.Order.Order_new(side="Buy",symbol=self.futtoks[token]['bybit'],order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['bid'],time_in_force="PostOnly").result()
+                            r = self.bit.Order.Order_new(side="Buy",symbol=self.futtoks[token]['bybit'].replace('-bybit', ''),order_type="Limit",qty=qty,price=self.get_bbo('bybit', self.futtoks[token]['bybit'])['bid'],time_in_force="PostOnly").result()
                         if afut != "":
                             if math.fabs(self.positions[fut]['size']) >= 100 and math.fabs(self.positions[fut]['size']) > 1.33 * math.fabs(self.positions[afut]['size']):
                                 extraPrint(False, 'reduced at a profit too much! We must now lose!')
-                                print(self.len_ask_ords)
-                                print(self.len_ask_ords[self.futtoks[token]['bybit']])
-                                if  self.len_ask_ords[self.futtoks[token]['bybit']] == 0:
+                                #print(self.len_ask_ords)
+                                #print(self.len_ask_ords[self.futtoks[token]['bybit']])
+                                if  self.len_ask_ords[self.futtoks[token]['bybit']] == 0 and qty + skew_size[token]  <  self.MAX_SKEW:
 
                                     
-                                    r = self.bit.Order.Order_new(side="Sell",symbol=self.futtoks[token]['bybit'],order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['ask'],time_in_force="PostOnly").result()
+                                    r = self.bit.Order.Order_new(side="Sell",symbol=self.futtoks[token]['bybit'].replace('-bybit', ''),order_type="Limit",qty=qty,price=self.get_bbo('bybit', self.futtoks[token]['bybit'])['ask'],time_in_force="PostOnly").result()
                     
-                        extraPrint(False, r)
+                        #extraPrint(False, r)
                 if token == 'BTC':
                     fut = 'XBTUSD'
                 else:
                     fut = 'ETHUSD'
                 if qty + skew_size[token] < self.MAX_SKEW:
                     if  self.len_bid_ords[self.futtoks[token]['bitmex']] == 0:
-                        self.mex.Order( self.futtoks[token]['bitmex'], qty, orderQty=-qty, price=self.get_bbo('bitmex', fut)['bid'],execInst="ParticipateDoNotInitiate").result()
+                        self.mex.Order.Order_new(symbol=self.futtoks[token]['bitmex'], orderQty=-qty, price=self.get_bbo('bitmex', self.futtoks[token]['bitmex'])['bid'],execInst="ParticipateDoNotInitiate").result()
                     if afut != "":
                         if math.fabs(self.positions[fut]['size']) >= 100 and math.fabs(self.positions[fut]['size']) > 1.33 * math.fabs(self.positions[afut]['size']):
                             extraPrint(False, 'reduced at a profit too much! We must now lose!')
                             
                             sleep(0.1)
-                            if  self.len_ask_ords[self.futtoks[token]['bitmex']] == 0:
-                                r = self.mex.Order( self.futtoks[token]['bitmex'], qty, orderQty=--1*qty, price=self.get_bbo('bitmex', fut)['ask'],execInst="ParticipateDoNotInitiate").result()
+                            if  self.len_ask_ords[self.futtoks[token]['bitmex']] == 0 and qty + skew_size[token] <  self.MAX_SKEW:
+                                r = self.mex.Order.Order_new(symbol=self.futtoks[token]['bitmex'], orderQty=--1*qty, price=self.get_bbo('bitmex', self.futtoks[token]['bitmex'])['ask'],execInst="ParticipateDoNotInitiate").result()
                 
      
             if ex == 'bybit':
@@ -1514,30 +1538,30 @@ class MarketMaker( object ):
                 for fut in self.futures['bybit']:
                     if qty + skew_size[token] * -1 <  self.MAX_SKEW and place_asks == True:
                         afut = fut
-                        print(self.len_ask_ords)
-                        print(self.len_ask_ords[self.futtoks[token]['bybit']])
+                        #print(self.len_ask_ords)
+                        #print(self.len_ask_ords[self.futtoks[token]['bybit']])
                         if  self.len_ask_ords[self.futtoks[token]['bybit']] == 0:
 
                             
-                            r = self.bit.Order.Order_new(side="Sell",symbol=self.futtoks[token]['bybit'],order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['ask'],time_in_force="PostOnly").result()
-                        extraPrint(False, r)
+                            r = self.bit.Order.Order_new(side="Sell",symbol=self.futtoks[token]['bybit'].replace('-bybit', ''),order_type="Limit",qty=qty,price=self.get_bbo('bybit', self.futtoks[token]['bybit'])['ask'],time_in_force="PostOnly").result()
+                        #extraPrint(False, r)
                 for fut in self.futures['deribit']:
                     if qty + skew_size[token] < self.MAX_SKEW:
                         qty2 = qty
-                        if 'BTC' in fut:
+                        if 'BTC' in self.futtoks[token]['deribit']:
                             qty2 = round(qty / 10)
                             extraPrint(False, fut + ' DERIBIT TRADE! ' + str(qty2))
                         if  self.len_bid_ords[self.futtoks[token]['deribit']] == 0:
-                            self.client.buy( self.futtoks[token]['deribit'], qty2, self.get_bbo('deribit', fut)['bid'], 'true' )
+                            self.client.buy( self.futtoks[token]['deribit'], qty2, self.get_bbo('deribit', self.futtoks[token]['deribit'])['bid'], 'true' )
                         if afut != "":
                             if math.fabs(self.positions[fut]['size']) >= 100 and math.fabs(self.positions[fut]['size']) > 1.33 * math.fabs(self.positions[afut]['size']):
                                 extraPrint(False, 'reduced at a profit too much! We must now lose!')
                                 qty2 = qty
-                                if 'BTC' in fut:
+                                if 'BTC' in self.futtoks[token]['deribit']:
                                     qty2 = round(qty / 10)
                                     extraPrint(False, fut + ' DERIBIT TRADE! ' + str(qty2))
-                                if  self.len_ask_ords[self.futtoks[token]['deribit']] == 0:
-                                    self.client.sell( self.futtoks[token]['deribit'], qty2, self.get_bbo('deribit', fut)['ask'], 'true' )
+                                if  self.len_ask_ords[self.futtoks[token]['deribit']] == 0 and qty + skew_size[token] <  self.MAX_SKEW:
+                                    self.client.sell( self.futtoks[token]['deribit'], qty2, self.get_bbo('deribit', self.futtoks[token]['deribit'])['ask'], 'true' )
                         
                 if token == 'BTC':
                     fut = 'XBTUSD'
@@ -1545,13 +1569,13 @@ class MarketMaker( object ):
                     fut = 'ETHUSD'
                 if qty + skew_size[token] < self.MAX_SKEW:
                     if  self.len_bid_ords[self.futtoks[token]['bitmex']] == 0:
-                        self.mex.Order( self.futtoks[token]['bitmex'], qty, orderQty=qty, price=self.get_bbo('bitmex', fut)['bid'],execInst="ParticipateDoNotInitiate").result()
+                        self.mex.Order.Order_new(symbol=self.futtoks[token]['bitmex'], orderQty=qty, price=self.get_bbo('bitmex', self.futtoks[token]['bitmex'])['bid'],execInst="ParticipateDoNotInitiate").result()
                     if afut != "":
                         if math.fabs(self.positions[fut]['size']) >= 100 and math.fabs(self.positions[fut]['size']) > 1.33 * math.fabs(self.positions[afut]['size']):
                             extraPrint(False, 'reduced at a profit too much! We must now lose!')
-                            if  self.len_ask_ords[self.futtoks[token]['bitmex']] == 0:
+                            if  self.len_ask_ords[self.futtoks[token]['bitmex']] == 0 and qty + skew_size[token]  <  self.MAX_SKEW:
                                 sleep(0.1)
-                                self.mex.Order( self.futtoks[token]['bitmex'], qty, orderQty=-1*qty, price=self.get_bbo('bitmex', fut)['ask'],execInst="ParticipateDoNotInitiate").result()
+                                self.mex.Order.Order_new(symbol=self.futtoks[token]['bitmex'], orderQty=-1*qty, price=self.get_bbo('bitmex', self.futtoks[token]['bitmex'])['ask'],execInst="ParticipateDoNotInitiate").result()
                     
 
 
@@ -1571,43 +1595,43 @@ class MarketMaker( object ):
                     sleep(0.1)
                     extraPrint(False, 'short mex unskewed')
                     if  self.len_ask_ords[self.futtoks[token]['bitmex']] == 0:
-                        self.mex.Order( self.futtoks[token]['bitmex'], qty, orderQty=-1 * qty, price=self.get_bbo('bitmex', fut)['ask'],execInst="ParticipateDoNotInitiate").result()
+                        self.mex.Order.Order_new(symbol=self.futtoks[token]['bitmex'], orderQty=-1 * qty, price=self.get_bbo('bitmex', self.futtoks[token]['bitmex'])['ask'],execInst="ParticipateDoNotInitiate").result()
                 for fut in self.futures['deribit']:
                     if qty + skew_size[token] < self.MAX_SKEW:
                         extraPrint(False, 'tokenfut! ' + fut + ' deribit')
                         qty2 = qty
-                        if 'BTC' in fut:
+                        if 'BTC' in self.futtoks[token]['deribit']:
                             qty2 = round(qty / 10)
                             extraPrint(False, fut + ' DERIBIT TRADE! ' + str(qty2))
                         if  self.len_bid_ords[self.futtoks[token]['deribit']] == 0:
-                            self.client.buy( self.futtoks[token]['deribit'], qty2, self.get_bbo('deribit', fut)['bid'], 'true' )
+                            self.client.buy( self.futtoks[token]['deribit'], qty2, self.get_bbo('deribit', self.futtoks[token]['deribit'])['bid'], 'true' )
                         if afut != "":
                             if math.fabs(self.positions[fut]['size']) >= 100 and math.fabs(self.positions[fut]['size']) > 1.33 * math.fabs(self.positions[afut]['size']):
                                 extraPrint(False, 'reduced at a profit too much! We must now lose!')
                                 qty2 = qty
-                                if 'BTC' in fut:
+                                if 'BTC' in self.futtoks[token]['deribit']:
                                     qty2 = round(qty / 10)
                                     extraPrint(False, fut + ' DERIBIT TRADE! ' + str(qty2))
-                                if  self.len_ask_ords[self.futtoks[token]['deribit']] == 0:
-                                    self.client.sell( self.futtoks[token]['deribit'], qty2, self.get_bbo('deribit', fut)['ask'], 'true' )
+                                if  self.len_ask_ords[self.futtoks[token]['deribit']] == 0 and qty + skew_size[token]  <  self.MAX_SKEW:
+                                    self.client.sell( self.futtoks[token]['deribit'], qty2, self.get_bbo('deribit', self.futtoks[token]['deribit'])['ask'], 'true' )
                         
                 for fut in self.futures['bybit']:
                         
                     if qty + skew_size[token] < self.MAX_SKEW:
                         extraPrint(False, 'tokenfut! ' + fut + ' bybit')
                         if  self.len_bid_ords[self.futtoks[token]['bybit']] == 0:
-                            r = self.bit.Order.Order_new(side="Buy",symbol=self.futtoks[token]['bybit'],order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['bid'],time_in_force="PostOnly").result()
-                        extraPrint(False, r)
+                            r = self.bit.Order.Order_new(side="Buy",symbol=self.futtoks[token]['bybit'].replace('-bybit', ''),order_type="Limit",qty=qty,price=self.get_bbo('bybit', self.futtoks[token]['bybit'])['bid'],time_in_force="PostOnly").result()
+                        #extraPrint(False, r)
                         if afut != "":
                             
                             if  math.fabs(self.positions[fut]['size']) >= 500 and math.fabs(self.positions[fut]['size']) > 1.33 * math.fabs(self.positions[afut]['size']):
                                 extraPrint(False, 'reduced at a profit too much! We must now lose!')
-                                print(self.len_ask_ords)
-                                print(self.len_ask_ords[self.futtoks[token]['bybit']])
-                                if  self.len_ask_ords[self.futtoks[token]['bybit']] == 0:
+                                #print(self.len_ask_ords)
+                                #print(self.len_ask_ords[self.futtoks[token]['bybit']])
+                                if  self.len_ask_ords[self.futtoks[token]['bybit']] == 0 and qty + skew_size[token] <  self.MAX_SKEW:
 
                                     
-                                    r = self.bit.Order.Order_new(side="Sell",symbol=self.futtoks[token]['bybit'],order_type="Limit",qty=qty,price=self.get_bbo('bybit', fut)['ask'],time_in_force="PostOnly").result()
+                                    r = self.bit.Order.Order_new(side="Sell",symbol=self.futtoks[token]['bybit'].replace('-bybit', ''),order_type="Limit",qty=qty,price=self.get_bbo('bybit', self.futtoks[token]['bybit'])['ask'],time_in_force="PostOnly").result()
                                     
             self.execute_cancels(ex, fut, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, qtybtc, con_sz, tsz, cancel_oids)
         
