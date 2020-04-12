@@ -1361,7 +1361,7 @@ class MarketMaker( object ):
                          if afut != "":
                             if math.fabs(self.positions[fut]['size']) >= 100 and math.fabs(self.positions[fut]['size']) > 1.33 * math.fabs(self.positions[afut]['size']):
                                 extraPrint(False, 'reduced at a profit too much! We must now lose!')
-                                if  self.len_bid_ords[self.futtoks[token]['bybit']] == 0 qty + skew_size[token] <  -1 * self.MAX_SKEW:
+                                if  self.len_bid_ords[self.futtoks[token]['bybit']] == 0 and qty + skew_size[token] <  -1 * self.MAX_SKEW:
                                     r = self.bit.Order.Order_new(side="Buy",symbol=self.futtoks[token]['bybit'].replace('-bybit', ''),order_type="Limit",qty=qty,price=self.get_bbo('bybit', self.futtoks[token]['bybit'])['bid'],time_in_force="PostOnly").result()
                          
                 if token == 'BTC':
