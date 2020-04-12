@@ -1026,7 +1026,7 @@ class MarketMaker( object ):
                 print('no bid, returning')
                 return
             if ex == 'bitmex':
-                self.qty = round ( float(prc) * self.qtybtc )
+                self.qty = round ( float(prc) * qtybtc )
                 
             if self.qty > self.maxqty:
                 self.maxqty = self.qty
@@ -1154,7 +1154,7 @@ class MarketMaker( object ):
             print('no bid, returning')
             return
         if ex == 'bitmex':
-            self.qty = round ( float(prc) * self.qtybtc )
+            self.qty = round ( float(prc) * qtybtc )
         if self.qty > self.maxqty:
             self.maxqty = self.qty
         
