@@ -38,13 +38,12 @@ def PrintException():
     linecache.checkcache(filename)
     line = linecache.getline(filename, lineno, f.f_globals)
     string = 'EXCEPTION IN ({}, LINE {} "{}"): {}'.format(filename, lineno, line.strip(), exc_obj)
-    print(string)
-    sleep(10)
+    extraPrint(True, string)
 def extraPrint(toconsole, string):
     
 
-    #if toconsole == True:
-        #print(string)
+    if toconsole == True:
+        print(string)
     log = 'log.txt'
     with open(log, "a") as myfile:
         myfile.write(datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' ) + ', line: ' + str(inspect.currentframe().f_back.f_lineno)  + ': ' + str(string) + '\n')
@@ -1547,6 +1546,20 @@ class MarketMaker( object ):
         askbids = self.get_asks_bids(ex, token)
         asks = askbids['asks']
         bids = askbids['bids']
+        skew_size = {}
+        skew_size['BTC'] = 0
+        skew_size['ETH'] = 0
+        qty = self.qty
+        if self.qty == None:
+            qty = MIN_ORDER_SIZE
+        if token == 'BTC-PERPETUAL':
+            qty = qty / 10
+        qty = round(qty)
+        for k in self.positions:
+            if 'ETH' in k:
+                skew_size['ETH'] = skew_size['ETH'] + self.positions[k]['size']
+            else:
+                skew_size['BTC'] = skew_size['BTC'] + self.positions[k]['size']
 
         # bid edit
         try:
@@ -1559,40 +1572,47 @@ class MarketMaker( object ):
             for i in range(0, min(len(asks),(len(bids)))):
                 gogo = True
                 if len(self.bid_ords[self.futtoks[token][ex]]) > i:
-                    if float(bids[i]) == float(self.bid_ords[self.futtoks[token][ex]][i]['price']):
-                        gogo = False 
+                    if 'status' in self.bid_ords[self.futtoks[token][ex]][i]:
+                        if self.bid_ords[self.futtoks[token][ex]][i]['status'] == 'new':
+                        
+                            if float(bids[i]) == float(self.bid_ords[self.futtoks[token][ex]][i]['price']):
+                                gogo = False 
 
-                        print(' ')
-                        print(ex + ' ' + self.futtoks[token][ex] + ' bid price  at ' + str(bids[i]) + ' unchanged! skippping it!')
-                        print(' ') 
-                if gogo == True and len(self.bid_ords[self.futtoks[token][ex]]) > i:
-                    print('min asks bids 4: ' + str(self.asksleftbefore[self.futtoks[token][ex]]) + ', ' + str(self.bidsleftbefore[self.futtoks[token][ex]]))
-                    oid = self.bid_ords[self.futtoks[token][ex]][i ][ 'orderID' ]
-                    self.ibid[self.futtoks[token][ex]] = self.ibid[self.futtoks[token][ex]] - 1
-                    try:
-                        self.bidsleftbefore[self.futtoks[token][ex]] = self.bidsleftbefore[self.futtoks[token][ex]] + 1
-                        print(token)
-                        if ex == 'deribit':
-                            qty = self.qty
-                            if self.qty == None:
-                                qty = MIN_ORDER_SIZE
-                            if token == 'BTC':
-                                qty = qty / 10
-                            qty = round(qty)
-                            print('edit deribit bid ' + str(oid))
-                            print(self.client.edit( oid, qty,  bids[i] ))
-                        if ex == 'bybit':
-                            print('edit bybit bid: ' + str(oid))
-                            print(self.bit.Order.Order_replace(order_id=oid, symbol=self.futtoks[token][ex],  p_r_price=bids[i]).result())
-                        if ex == 'bitmex':
-                            print('edit bitmex bid: ' + str(oid))
-                            print(self.mex.Order.Order_amend(orderID=oid, price=bids[i]).result())
-                    except Exception as e:
-                        PrintException()
-                        extraPrint(False, e)
-                        abc=123#extraPrint(False, e)
+                                print(' ')
+                                print(ex + ' ' + self.futtoks[token][ex] + ' bid price  at ' + str(bids[i]) + ' unchanged! skippping it!')
+                                print(' ') 
+                            if qty + skew_size[token] > self.MAX_SKEW:
 
-                        extraPrint(False, e)
+                                
+                                        if ex == 'deribit':
+                                            self.client.cancel( self.bid_ords[self.futtoks[token][ex]][i]['orderID'] )
+                                        if ex == 'bybit':
+                                            self.bit.Order.Order_cancel(order_id=self.bid_ords[self.futtoks[token][ex]][i]['orderID'] ).result()
+                                        if ex == 'bitmex':
+                                            self.mex.Order.Order_cancel(orderID=self.bid_ords[self.futtoks[token][ex]][i]['orderID']).result()
+                        if gogo == True and len(self.bid_ords[self.futtoks[token][ex]]) > i:
+                            print('min asks bids 4: ' + str(self.asksleftbefore[self.futtoks[token][ex]]) + ', ' + str(self.bidsleftbefore[self.futtoks[token][ex]]))
+                            oid = self.bid_ords[self.futtoks[token][ex]][i ][ 'orderID' ]
+                            self.ibid[self.futtoks[token][ex]] = self.ibid[self.futtoks[token][ex]] - 1
+                            try:
+                                self.bidsleftbefore[self.futtoks[token][ex]] = self.bidsleftbefore[self.futtoks[token][ex]] + 1
+                                print(token)
+                                if ex == 'deribit':
+                                    
+                                    print('edit deribit bid ' + str(oid))
+                                    print(self.client.edit( oid, qty,  bids[i] ))
+                                if ex == 'bybit':
+                                    print('edit bybit bid: ' + str(oid))
+                                    print(self.bit.Order.Order_replace(order_id=oid, symbol=self.futtoks[token][ex],  p_r_price=bids[i]).result())
+                                if ex == 'bitmex':
+                                    print('edit bitmex bid: ' + str(oid))
+                                    print(self.mex.Order.Order_amend(orderID=oid, price=bids[i]).result())
+                            except Exception as e:
+                                PrintException()
+                                extraPrint(False, e)
+                                abc=123#extraPrint(False, e)
+
+                                extraPrint(False, e)
                     
         except Exception as e:
             PrintException()
@@ -1607,47 +1627,56 @@ class MarketMaker( object ):
                 extraPrint(True, self.openOrders[self.futtoks[token][ex]]['asks'])
                 extraPrint(True, self.len_ask_ords[self.futtoks[token][ex]])
             for i in range(0, min(len(asks),(len(bids)))):
-                
-                gogo = True
                 if len(self.ask_ords[self.futtoks[token][ex]]) > i:
-                    if float(asks[i]) == float(self.ask_ords[self.futtoks[token][ex]][i]['price']):
-                        gogo = False 
-
-                        print(' ')
-                        print(ex + ' ' + self.futtoks[token][ex] + ' ask price at ' + str(asks[i]) + ' unchanged! skippping it!')
-                        print('     ') 
-                if gogo == True and len(self.ask_ords[self.futtoks[token][ex]]) > i:
-                    
-                    extraPrint(True, 'min asks bids 5: ' + str(self.asksleftbefore[self.futtoks[token][ex]]) + ', ' + str(self.bidsleftbefore[self.futtoks[token][ex]]))
-                    oid = self.ask_ords[self.futtoks[token][ex]][i ][ 'orderID' ]
-
-                    self.iask[self.futtoks[token][ex]] = self.iask[self.futtoks[token][ex]] - 1
-                    try:
-                        self.asksleftbefore[self.futtoks[token][ex]] = self.asksleftbefore[self.futtoks[token][ex]] + 1
-                        extraPrint(True, token)
-                        if ex == 'deribit':
-                            qty = self.qty
-                            if self.qty == None:
-                                qty = MIN_ORDER_SIZE
-                            if token == 'BTC':
-                                qty = qty / 10
-                            qty = round(qty)
-                            extraPrint(True, 'edit deribit ask : ' + str(oid))
-                            self.client.edit( oid, qty,  asks[i] )
-                        if ex == 'bybit':
-                            #print(oid)
-
-                            print('edit bybit ask: ' + str(oid))
-                            print(self.bit.Order.Order_replace(order_id=oid, symbol=self.futtoks[token][ex], p_r_price=asks[i]).result())
-                        if ex == 'bitmex':
-                            print('edit bitmex ask: ' + str(oid))
+                    if 'status' in self.ask_ords[self.futtoks[token][ex]][i]:
+                        if self.ask_ords[self.futtoks[token][ex]][i]['status'] == 'new':
+                            gogo = True
                             
-                            print(self.mex.Order.Order_amend(orderID=oid, price=asks[i]).result())
-                    except Exception as e:
-                        PrintException()
-                        extraPrint(False, e)
-                        abc=123#extraPrint(False, e)
-                        extraPrint(False, e)
+                            if float(asks[i]) == float(self.ask_ords[self.futtoks[token][ex]][i]['price']):
+                                gogo = False 
+
+                                print(' ')
+                                print(ex + ' ' + self.futtoks[token][ex] + ' ask price at ' + str(asks[i]) + ' unchanged! skippping it!')
+                                print('     ') 
+                            if qty + skew_size[token] < -1 * self.MAX_SKEW:
+                                        if ex == 'deribit':
+                                            self.client.cancel( self.ask_ords[self.futtoks[token][ex]][i]['orderID'] )
+                                        if ex == 'bybit':
+                                            self.bit.Order.Order_cancel(order_id=self.ask_ords[self.futtoks[token][ex]][i]['orderID'] ).result()
+                                        if ex == 'bitmex':
+                                            self.mex.Order.Order_cancel(orderID=self.ask_ords[self.futtoks[token][ex]][i]['orderID']).result()
+                        if gogo == True and len(self.ask_ords[self.futtoks[token][ex]]) > i:
+                            
+                            extraPrint(True, 'min asks bids 5: ' + str(self.asksleftbefore[self.futtoks[token][ex]]) + ', ' + str(self.bidsleftbefore[self.futtoks[token][ex]]))
+                            oid = self.ask_ords[self.futtoks[token][ex]][i ][ 'orderID' ]
+
+                            self.iask[self.futtoks[token][ex]] = self.iask[self.futtoks[token][ex]] - 1
+                            try:
+                                self.asksleftbefore[self.futtoks[token][ex]] = self.asksleftbefore[self.futtoks[token][ex]] + 1
+                                extraPrint(True, token)
+                                if ex == 'deribit':
+                                    qty = self.qty
+                                    if self.qty == None:
+                                        qty = MIN_ORDER_SIZE
+                                    if token == 'BTC':
+                                        qty = qty / 10
+                                    qty = round(qty)
+                                    extraPrint(True, 'edit deribit ask : ' + str(oid))
+                                    self.client.edit( oid, qty,  asks[i] )
+                                if ex == 'bybit':
+                                    #print(oid)
+
+                                    print('edit bybit ask: ' + str(oid))
+                                    print(self.bit.Order.Order_replace(order_id=oid, symbol=self.futtoks[token][ex], p_r_price=asks[i]).result())
+                                if ex == 'bitmex':
+                                    print('edit bitmex ask: ' + str(oid))
+                                    
+                                    print(self.mex.Order.Order_amend(orderID=oid, price=asks[i]).result())
+                            except Exception as e:
+                                PrintException()
+                                extraPrint(False, e)
+                                abc=123#extraPrint(False, e)
+                                extraPrint(False, e)
            
         except Exception as e:
             PrintException()
