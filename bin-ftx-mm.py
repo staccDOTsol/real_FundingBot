@@ -255,7 +255,7 @@ class MarketMaker( object ):
         tdaily = 0
         test = 0
         for arb in self.arbmult:
-            self.arbmult[arb]['perc'] = round(self.arbmult[arb]['arb'] / t * 1000) / 1000 * 1.41425
+            self.arbmult[arb]['perc'] = round(self.arbmult[arb]['arb'] / t * 1000) / 1000 #* 1.41425
             self.arbmult[arb]['amt'] = round(exposure * self.arbmult[arb]['perc'] * 1000) / 1000
             self.arbmult[arb]['daily'] = round(self.arbmult[arb]['amt'] * self.arbmult[arb]['arb'] * 1000) / 1000
             
@@ -277,6 +277,18 @@ class MarketMaker( object ):
             self.LEV_LIM_SHORT[coin] = 30
             self.PCT_LIM_SHORT[coin]       = 15    # % position limit short
         for token in self.positions:
+            token = token.split('-')[0]
+            self.LEV_LIM_LONG[token] = self.LEV_LIM_LONG[token] * self.arbmult[token]['perc'] 
+            self.LEV_LIM_SHORT[token] = self.LEV_LIM_SHORT[token] * self.arbmult[token]['perc'] 
+            self.PCT_LIM_SHORT[token]  = self.PCT_LIM_SHORT[token] * self.arbmult[token]['perc'] 
+            self.PCT_LIM_LONG[token]  = self.PCT_LIM_LONG[token] * self.arbmult[token]['perc'] 
+        for coin in self.futures:
+            coin = coin.split('-')[0]
+            self.PCT_LIM_LONG[coin]        = 15      # % position limit long
+            self.LEV_LIM_LONG[coin] = 30
+            self.LEV_LIM_SHORT[coin] = 30
+            self.PCT_LIM_SHORT[coin]       = 15    # % position limit short
+        for token in self.futures:
             token = token.split('-')[0]
             self.LEV_LIM_LONG[token] = self.LEV_LIM_LONG[token] * self.arbmult[token]['perc'] 
             self.LEV_LIM_SHORT[token] = self.LEV_LIM_SHORT[token] * self.arbmult[token]['perc'] 
@@ -498,6 +510,7 @@ class MarketMaker( object ):
                 elif (((a[pos.split('-')[0]] / self.equity_usd) / self.LEV_LIM_LONG[pos.split('-')[0]] * 1000 ) / 10  * len(self.active)) > 100:
                     self.place_bids[pos.split('-')[0]] = False
                     nbids = 0
+
             
             print(self.place_bids)
             min_order_size_btc = MIN_ORDER_SIZE 
@@ -925,6 +938,11 @@ class MarketMaker( object ):
                 self.place_orders('binance', token)
                 
                 self.place_orders('ftx', token)
+            for token in self.futures:
+                token = token.split('-')[0]
+                self.place_orders('binance', token)
+                
+                self.place_orders('ftx', token)
             ###print('out of sleep!')
             #self.place_orders()
 
@@ -996,11 +1014,11 @@ class MarketMaker( object ):
                     ###print(pos)
                     pos['symbol'] = pos['symbol'].replace('USDT', '').replace('USD', '')
                     pos['size'] = float(pos['positionAmt']) * self.get_spot(pos['symbol'])
-                    if pos['size'] == 0:
-                        pos['size'] = 1
+                    #if pos['size'] == 0:
+                    #    pos['size'] = 1
                     pos['floatingPl'] = float(pos['unRealizedProfit']) 
-                    
-                    self.positions[ pos[ 'symbol' ] + '-binance'] = pos
+                    if pos['size'] != 0:
+                        self.positions[ pos[ 'symbol' ] + '-binance'] = pos
             if ex == 'ftx':
                 try:
                     positions       = self.ftx.privateGetPositions()['result']
@@ -1012,9 +1030,10 @@ class MarketMaker( object ):
                         pos['future'] = pos['future'].replace('-PERP', '')
                         pos['floatingPl'] = pos['unrealizedPnl']
                         pos['size'] = float(pos['netSize']) * self.get_spot(pos['future'])
-                        if pos['size'] == 0:
-                            pos['size'] = 2
-                        self.positions[ pos[ 'future' ] + '-ftx'] = pos
+                        #if pos['size'] == 0:
+                        #    pos['size'] = 2
+                        if pos['size'] != 0:
+                            self.positions[ pos[ 'future' ] + '-ftx'] = pos
                 except:
                     PrintException()
                 
