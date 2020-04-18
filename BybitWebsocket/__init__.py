@@ -94,7 +94,7 @@ class BybitWebsocket:
 
         self.ws.send(args)
 
-    def __on_message(self, message):
+    def __on_message(self, ws, message):
         '''Handler for parsing WS messages.'''
         message = json.loads(message)
         if 'success' in message and message["success"]:   
