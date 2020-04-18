@@ -210,6 +210,12 @@ class MarketMaker( object ):
         ##print('arb now')
         arbmultold = self.arbmult
         self.arbmult = {}
+
+        for token in self.positions:
+            self.arbmult[token.split('-')[0]] = {}
+        for token in self.positions:
+            self.arbmult[token.split('-')[0]]['perc'] = 0
+            self.arbmult[token.split('-')[0]]['arb'] = 0
         minArb = (0.0002 * 1 + 0.0002 * 1) / 2 * 2
         self.active = []
         for arb in arbs:
@@ -242,12 +248,14 @@ class MarketMaker( object ):
         exposure = bal * lev
         fees = (0.02/100 + (0.02*0.7)/100) * 2
         for arb in self.arbmult:
-            t = t + self.arbmult[arb]['arb']
-            c = c + 1
+            if self.arbmult[arb]['arb'] > 0:
+                t = t + self.arbmult[arb]['arb']
+
+                c = c + 1
         tdaily = 0
         test = 0
         for arb in self.arbmult:
-            self.arbmult[arb]['perc'] = round(self.arbmult[arb]['arb'] / t * 1000) / 1000
+            self.arbmult[arb]['perc'] = round(self.arbmult[arb]['arb'] / t * 1000) / 1000 * 1.41425
             self.arbmult[arb]['amt'] = round(exposure * self.arbmult[arb]['perc'] * 1000) / 1000
             self.arbmult[arb]['daily'] = round(self.arbmult[arb]['amt'] * self.arbmult[arb]['arb'] * 1000) / 1000
             
@@ -262,16 +270,18 @@ class MarketMaker( object ):
         roe = ((((annualret / bal) * 1000) / 10) * 1000) / 1000
         apr = (returns * 365 * 1000) / 1000
         ##print('that is $' + str(annualret) + ' annualized, ' + str(roe) + '% ROE and ' + str(apr) + '% APR')
-        for coin in self.arbmult:
+        for coin in self.positions:
+            coin = coin.split('-')[0]
             self.PCT_LIM_LONG[coin]        = 15      # % position limit long
             self.LEV_LIM_LONG[coin] = 30
             self.LEV_LIM_SHORT[coin] = 30
             self.PCT_LIM_SHORT[coin]       = 15    # % position limit short
-        for token in self.arbmult:
-            self.LEV_LIM_LONG[token] = self.LEV_LIM_LONG[token] * self.arbmult[token]['perc']
-            self.LEV_LIM_SHORT[token] = self.LEV_LIM_SHORT[token] * self.arbmult[token]['perc']
-            self.PCT_LIM_SHORT[token]  = self.PCT_LIM_SHORT[token] * self.arbmult[token]['perc']
-            self.PCT_LIM_LONG[token]  = self.PCT_LIM_LONG[token] * self.arbmult[token]['perc']
+        for token in self.positions:
+            token = token.split('-')[0]
+            self.LEV_LIM_LONG[token] = self.LEV_LIM_LONG[token] * self.arbmult[token]['perc'] 
+            self.LEV_LIM_SHORT[token] = self.LEV_LIM_SHORT[token] * self.arbmult[token]['perc'] 
+            self.PCT_LIM_SHORT[token]  = self.PCT_LIM_SHORT[token] * self.arbmult[token]['perc'] 
+            self.PCT_LIM_LONG[token]  = self.PCT_LIM_LONG[token] * self.arbmult[token]['perc'] 
         #0.0011
         #119068
         print(self.LEV_LIM_SHORT)
@@ -294,7 +304,7 @@ class MarketMaker( object ):
            # marginbinance = float(bal['info']['totalInitialMargin']) / float(bal['info'][ 'totalMarginBalance' ]) * 100
             ##print(marginbinance)
         #if marginftx != 0.1 and marginbinance != 0.1:
-        self.IM = marginftx #(marginbinance + marginftx) / 2
+        self.IM = marginftx / 2 #(marginbinance + marginftx) / 2
         self.LEV = self.IM * 2
         bal = self.binance.fetchBalance()
         bal = bal['info'] [ 'totalMarginBalance' ]
@@ -434,18 +444,19 @@ class MarketMaker( object ):
         print( '' )
 
         
-    def place_orders( self, ex ):
+    def place_orders( self, ex, token ):
         ##print('place_orders')
         ##print(self.arbmult)
         up = 0
-        for i in range(len(self.futures)):
-            
-            ex = self.totrade[random.randint(0, 1)]
+        if True:
             up = up + 1
             if up == 5:
                 up = 0
                 self.update_positions()
-            token = self.futures[random.randint(0, len(self.futures) -1)]
+            if token in self.blockers:
+                if self.blockers[token] == True:
+                    print('blocked..return')
+                    return
             ##print(token)
             if self.monitor:
                 return None
@@ -471,15 +482,20 @@ class MarketMaker( object ):
             for pos in self.positions:
                 a[pos.split('-')[0]] = a[pos.split('-')[0]] + math.fabs(self.positions[pos]['size'])
             for pos in self.positions:
-                print(pos)
-                print(a[pos.split('-')[0]])
+                #print(pos)
+                #print(a[pos.split('-')[0]])
                 # ((158 / 100) / 4 * 1000)/10*4)=
                 # ((30/1) / 15) * 1000) / 10=
-                print((((a[pos.split('-')[0]] / self.equity_usd) / self.LEV_LIM_SHORT[pos.split('-')[0]] * 1000 ) / 10 * len(self.active)))
-                if (((a[pos.split('-')[0]] / self.equity_usd) / self.LEV_LIM_SHORT[pos.split('-')[0]] * 1000 ) / 10  * len(self.active)) > 100:
+                #print((((a[pos.split('-')[0]] / self.equity_usd) / self.LEV_LIM_SHORT[pos.split('-')[0]] * 1000 ) / 10 * len(self.active)))
+                if self.LEV_LIM_SHORT[pos.split('-')[0]] == 0:
+                    self.place_asks[pos.split('-')[0]] = False
+                elif (((a[pos.split('-')[0]] / self.equity_usd) / self.LEV_LIM_SHORT[pos.split('-')[0]] * 1000 ) / 10  * len(self.active)) > 100:
                     self.place_asks[pos.split('-')[0]]= False
                     nasks = 0
-                if (((a[pos.split('-')[0]] / self.equity_usd) / self.LEV_LIM_LONG[pos.split('-')[0]] * 1000 ) / 10  * len(self.active)) > 100:
+                
+                if self.LEV_LIM_LONG[pos.split('-')[0]] == 0:
+                    self.place_bids[pos.split('-')[0]] = False
+                elif (((a[pos.split('-')[0]] / self.equity_usd) / self.LEV_LIM_LONG[pos.split('-')[0]] * 1000 ) / 10  * len(self.active)) > 100:
                     self.place_bids[pos.split('-')[0]] = False
                     nbids = 0
             
@@ -561,9 +577,16 @@ class MarketMaker( object ):
         qty = (( qtybtc * self.get_spot('BTC')) / self.get_bbo(ex, fut)['ask'])
         if qty < 0.001:
             qty = 0.001
-        #print('qty: ' + fut + ': ' + str(qty))
+        self.MAX_SKEW = qty * prc * 1.1
+        c = 1
+        for block in self.blockers:
+            if self.blockers[block] == True:
+                c = c * 1.25
+
+        qty = qty * c
+        self.MAX_SKEW = self.MAX_SKEW * c
+        print('qty: ' + fut + ': ' + str(qty))
         #qty = int(qty)
-        self.MAX_SKEW = qty * prc * 2.1
 
         #print('skew_size[token]: ' + str(skew_size[token]))
         #print('MAX SKEW ' + str(self.MAX_SKEW))
@@ -656,7 +679,7 @@ class MarketMaker( object ):
     def execute_longs ( self, prc, token, qty, ex, fut, skew_size,  nbids, nasks,  bids, asks, bid_ords, ask_ords, qtybtc, con_sz, cancel_oids, len_bid_ords, len_ask_ords):
         delta = datetime.timedelta(hours=1)
         now = datetime.datetime.now()
-        next_hour = (now + delta).replace(microsecond=0, second=0, minute=7)
+        next_hour = (now + delta).replace(microsecond=0, second=0, minute=2)
         fut = token
         wait_seconds = (next_hour - now).seconds  
          
@@ -893,9 +916,10 @@ class MarketMaker( object ):
             t_now   = datetime.datetime.utcnow()
             
             # Update time series and vols
-            self.place_orders('binance')
-            
-            self.place_orders('ftx')
+            for token in self.futures:
+                self.place_orders('binance', token)
+                
+                self.place_orders('ftx', token)
             ###print('out of sleep!')
             #self.place_orders()
 
@@ -966,14 +990,12 @@ class MarketMaker( object ):
                     ###print('binance pos')
                     ###print(pos)
                     pos['symbol'] = pos['symbol'].replace('USDT', '').replace('USD', '')
-                    if pos['symbol'] in self.futures:
-                        pos['size'] = float(pos['positionAmt']) * self.get_spot(pos['symbol'])
-                        if pos['size'] == 0:
-                            pos['size'] = 1
-                        pos['floatingPl'] = float(pos['unRealizedProfit']) 
-                        
-                        if pos['symbol'] in self.futures:
-                            self.positions[ pos[ 'symbol' ] + '-binance'] = pos
+                    pos['size'] = float(pos['positionAmt']) * self.get_spot(pos['symbol'])
+                    if pos['size'] == 0:
+                        pos['size'] = 1
+                    pos['floatingPl'] = float(pos['unRealizedProfit']) 
+                    
+                    self.positions[ pos[ 'symbol' ] + '-binance'] = pos
             if ex == 'ftx':
                 try:
                     positions       = self.ftx.privateGetPositions()['result']
@@ -983,12 +1005,11 @@ class MarketMaker( object ):
                         ###print('ftx pos')
                         
                         pos['future'] = pos['future'].replace('-PERP', '')
-                        if pos[ 'future' ] in self.futures:
-                            pos['floatingPl'] = pos['unrealizedPnl']
-                            pos['size'] = float(pos['netSize']) * self.get_spot(pos['future'])
-                            if pos['size'] == 0:
-                                pos['size'] = 2
-                            self.positions[ pos[ 'future' ] + '-ftx'] = pos
+                        pos['floatingPl'] = pos['unrealizedPnl']
+                        pos['size'] = float(pos['netSize']) * self.get_spot(pos['future'])
+                        if pos['size'] == 0:
+                            pos['size'] = 2
+                        self.positions[ pos[ 'future' ] + '-ftx'] = pos
                 except:
                     PrintException()
                 
