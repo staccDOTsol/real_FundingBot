@@ -218,23 +218,74 @@ class MarketMaker( object ):
             self.arbmult[token.split('-')[0]]['arb'] = 0
         minArb = (0.0002 * 1 + 0.0002 * 1) / 2 * 2
         self.active = []
+        ftxmarkets = requests.get("https://ftx.com/api/futures").json()['result']
+        expis = []
+        allfuts = []
+        for market in ftxmarkets:
+            if market['perpetual'] == False:
+                if market['name'].split('-')[0] in arbs:
+                    if 'MOVE' not in market['name']:
+                        expis.append(market['name'].split('-')[1])
+                        allfuts.append(market['name'])
+        exps = {}
+        for exp in expis:
+            exps[exp] = 0
+        for exp in expis:
+            exps[exp] = exps[exp] + 1
+        futlist = {}
+        h = 0
+
+        for exp in exps:
+            if exps[exp] > h:
+                h = exps[exp]
+                w = exp
+        for ftxfut in allfuts:
+            if w in ftxfut:
+                futlist[ftxfut.split('-')[0]] =  ftxfut
+        #print(futlist)    
+        
         for arb in arbs:
             
             if len(arbs[arb]) > 1:
                 binance = arbs[arb]['binance']
                 ftx = arbs[arb]['ftx']
                 
-                if ftx < binance and ftx <=0 and binance >= 0 and ftx != binance:
-                    if binance - ftx > minArb:        
+                if (ftx < binance and ftx <=0 and binance >= 0 and ftx != binance) and (binance - ftx > minArb):        
                         self.arbmult[arb] = ({'coin': arb, 'long': 'ftx', 'short': 'binance', 'arb': binance - ftx})
                         self.futures.append(arb)
                         self.active.append(arb)
-                if ftx > binance and ftx >=0 and binance <= 0 and ftx != binance:
-                    if ftx - binance > minArb:
+                elif (ftx > binance and ftx >=0 and binance <= 0 and ftx != binance) and (ftx - binance > minArb):
                         self.arbmult[arb] = ({'coin': arb, 'long': 'binance', 'short': 'ftx', 'arb': ftx - binance})
                         self.futures.append(arb)
                         self.active.append(arb)
-        
+                elif (ftx < 0 or ftx > 0 and math.fabs(ftx) > math.fabs(binance)) and math.fabs(ftx) > minArb:
+                    if ftx > minArb:
+                        self.arbmult[arb] = ({'coin': arb, 'long': futlist[arb], 'short': 'ftx', 'arb': ftx})
+                        
+                        self.futures.append(arb)
+                        self.active.append(arb)
+                    if ftx < -1 * minArb:
+                        self.arbmult[arb] = ({'coin': arb, 'long': 'ftx', 'short': futlist[arb], 'arb': -1 * ftx})
+                        self.futures.append(arb)
+                        self.active.append(arb)
+                elif (binance < 0 or binance > 0 and math.fabs(binance) > math.fabs(ftx)) and math.fabs(binance) > minArb:
+                    if binance > minArb:
+                        self.arbmult[arb] = ({'coin': arb, 'long': futlist[arb], 'short': 'binance', 'arb': binance})
+                        self.futures.append(arb)
+                        self.active.append(arb)
+                    if binance < -1 * minArb:
+                        self.arbmult[arb] = ({'coin': arb, 'long': 'binance', 'short': futlist[arb], 'arb': -1 * binance})
+                        self.futures.append(arb)
+                        self.active.append(arb)
+                else:
+                    print('loser ' + arb)
+                    print(ftx - minArb)
+                    print(binance - minArb)
+        print(minArb)
+        for ex123 in self.totrade:
+            print(ex123)
+            print(self.rates[ex123]['BCH'])
+        print(self.arbmult)
         for fut in arbmultold:
             if fut not in self.arbmult:
                 self.arbmult[fut] = arbmultold[fut]
@@ -628,19 +679,19 @@ class MarketMaker( object ):
             gogo = True
         if gogo == True:
             if self.positions[fut + '-binance']['size'] > self.MAX_SKEW * 2 and self.place_bids[token] == False and self.place_asks[token] == False:
-                self.binance.createOrder(  fut + '/USDT', "Limit", 'sell', qty, self.get_bbo('binance', fut)['bid'], {"newClientOrderId": "x-v0tiKJjj-" + self.randomword(15)})
+                self.binance.createOrder(  fut + '/USDT', "Limit", 'sell', qty, self.get_bbo('binance', fut)['ask'], {"newClientOrderId": "x-v0tiKJjj-" + self.randomword(15)})
                 print('sell bin, return')
                 
             if self.positions[fut + '-binance']['size'] < -1 * self.MAX_SKEW * 2 and self.place_bids[token] == False and self.place_asks[token] == False:
-                self.binance.createOrder(  fut + '/USDT', "Limit", 'buy', qty, self.get_bbo('binance', fut)['ask'], {"newClientOrderId": "x-v0tiKJjj-" + self.randomword(15)})
+                self.binance.createOrder(  fut + '/USDT', "Limit", 'buy', qty, self.get_bbo('binance', fut)['bid'], {"newClientOrderId": "x-v0tiKJjj-" + self.randomword(15)})
                 print('buy bin, return')
                 
             if self.positions[fut + '-ftx']['size'] > self.MAX_SKEW * 2 and self.place_bids[token] == False and self.place_asks[token] == False:
-                self.ftx.createOrder(  fut + '-PERP', "limit", 'sell', qty, self.get_bbo('ftx', fut)['bid'], {"newClientOrderId": "x-v0tiKJjj-" + self.randomword(15)})
+                self.ftx.createOrder(  fut + '-PERP', "limit", 'sell', qty, self.get_bbo('ftx', fut)['ask'], {"newClientOrderId": "x-v0tiKJjj-" + self.randomword(15)})
                 print('sell ftx, return')
                 
             if self.positions[fut + '-ftx']['size'] < -1 * self.MAX_SKEW * 2 and self.place_bids[token] == False and self.place_asks[token] == False:
-                self.ftx.createOrder(  fut + '-PERP', "limit", 'buy', qty, self.get_bbo('ftx', fut)['ask'], {"newClientOrderId": "x-v0tiKJjj-" + self.randomword(15)})
+                self.ftx.createOrder(  fut + '-PERP', "limit", 'buy', qty, self.get_bbo('ftx', fut)['bid'], {"newClientOrderId": "x-v0tiKJjj-" + self.randomword(15)})
                 print('buy ftx, return')
                 
             if self.place_asks[token] == False and self.place_bids[token] == False and (math.fabs(self.positions[fut+'-binance']['size']) > 15 or math.fabs(self.positions[fut+'-ftx']['size']) > 15):
@@ -718,14 +769,14 @@ class MarketMaker( object ):
                     if ex == 'binance':
                     # deribit
                         print('bin 1')
-                        self.binance.createOrder(  fut + '/USDT', "Limit", 'sell', qty, self.get_bbo('binance', fut)['bid'], {"newClientOrderId": "x-v0tiKJjj-" + self.randomword(15)})
-                        self.ftx.createOrder(  fut + '-PERP', "limit", 'buy', qty / 3, self.get_bbo('ftx', fut)['ask'], {"newClientOrderId": "x-v0tiKJjj-" + self.randomword(15)})    
+                        self.binance.createOrder(  fut + '/USDT', "Limit", 'sell', qty, self.get_bbo('binance', fut)['ask'], {"newClientOrderId": "x-v0tiKJjj-" + self.randomword(15)})
+                        self.ftx.createOrder(  fut + '-PERP', "limit", 'buy', qty / 3, self.get_bbo('ftx', fut)['bid'], {"newClientOrderId": "x-v0tiKJjj-" + self.randomword(15)})    
                         
                     if ex == 'ftx':
                     # bybit
                         print('ftx 1')
-                        self.ftx.createOrder(  fut + '-PERP', "limit", 'sell', qty, self.get_bbo('ftx', fut)['bid'], {"newClientOrderId": "x-v0tiKJjj-" + self.randomword(15)})    
-                        self.binance.createOrder(  fut + '/USDT', "Limit", 'buy', qty / 3, self.get_bbo('binance', fut)['ask'], {"newClientOrderId": "x-v0tiKJjj-" + self.randomword(15)})
+                        self.ftx.createOrder(  fut + '-PERP', "limit", 'sell', qty, self.get_bbo('ftx', fut)['ask'], {"newClientOrderId": "x-v0tiKJjj-" + self.randomword(15)})    
+                        self.binance.createOrder(  fut + '/USDT', "Limit", 'buy', qty / 3, self.get_bbo('binance', fut)['bid'], {"newClientOrderId": "x-v0tiKJjj-" + self.randomword(15)})
                         
                     
         # long reduce
@@ -734,17 +785,172 @@ class MarketMaker( object ):
                     if ex == 'binance':
                     # deribit
                         print('bin 2')
-                        self.binance.createOrder(  fut + '/USDT', "Limit", 'buy', qty, self.get_bbo('binance', fut)['ask'], {"newClientOrderId": "x-v0tiKJjj-" + self.randomword(15)})
-                        self.ftx.createOrder(  fut + '-PERP', "limit", 'sell', qty / 3, self.get_bbo('ftx', fut)['bid'], {"newClientOrderId": "x-v0tiKJjj-" + self.randomword(15)})    
+                        self.binance.createOrder(  fut + '/USDT', "Limit", 'buy', qty, self.get_bbo('binance', fut)['bid'], {"newClientOrderId": "x-v0tiKJjj-" + self.randomword(15)})
+                        self.ftx.createOrder(  fut + '-PERP', "limit", 'sell', qty / 3, self.get_bbo('ftx', fut)['ask'], {"newClientOrderId": "x-v0tiKJjj-" + self.randomword(15)})    
                         
                     if ex == 'ftx':
                     # bybit
                         print('ftx 2')
-                        self.ftx.createOrder(  fut + '-PERP', "limit", 'buy', qty, self.get_bbo('ftx', fut)['ask'], {"newClientOrderId": "x-v0tiKJjj-" + self.randomword(15)})    
-                        self.binance.createOrder(  fut + '/USDT', "Limit", 'sell', qty / 3, self.get_bbo('binance', fut)['bid'], {"newClientOrderId": "x-v0tiKJjj-" + self.randomword(15)})
+                        self.ftx.createOrder(  fut + '-PERP', "limit", 'buy', qty, self.get_bbo('ftx', fut)['bid'], {"newClientOrderId": "x-v0tiKJjj-" + self.randomword(15)})    
+                        self.binance.createOrder(  fut + '/USDT', "Limit", 'sell', qty / 3, self.get_bbo('binance', fut)['ask'], {"newClientOrderId": "x-v0tiKJjj-" + self.randomword(15)})
                         
             print(ex)
-                                        
+            # long fut short ex?
+
+            if self.arbmult[token]['long'] not in self.totrade:
+                print('long fut ' + self.arbmult[token]['long'] + ' short ex: ' + self.arbmult[token]['short'])
+                if ex == 'binance' and self.arbmult[token]['short'] == 'binance':
+                    afut = ""
+                    print(self.MAX_SKEW)
+                    print(qty * prc + skew_size[token])
+
+                    if (reducing == False and token in fut and  qty * prc + (skew_size[token]) > -1 *  self.MAX_SKEW  and self.place_asks[token] == True) and (math.fabs(self.positions[token + '-ftx']['size']) / math.fabs(self.positions[token + '-binance']['size']) > 0.75):
+                        afut = fut
+                        if fut in self.maybes :
+                            if self.maybes[fut] == True and self.place_bids[token] == True:
+                                self.blockers[fut] = True
+                                self.maybes[fut] = False
+                                r = Timer(wait_seconds, self.resetBlocker, (token))
+                                print('block ' + token + ' for ' + str(wait_seconds))
+                                r.start()    
+                                
+                        print('binbin sell a fut')
+                        gogo = False
+                        if fut in self.blockers:
+                            if self.blockers[fut] == False:
+                                gogo = True
+                        else: 
+                            gogo = True    
+                        if gogo == True: 
+                            self.binance.createOrder(  fut + '/USDT', "Limit", 'sell', qty, self.get_bbo('binance', fut)['ask'], {"newClientOrderId": "x-v0tiKJjj-" + self.randomword(15)})
+                        
+                    print(qty * prc + -1 * skew_size[token])
+                    if  token in fut and  qty * prc + (skew_size[token]) <  self.MAX_SKEW and self.place_bids[token] == True and math.fabs(self.positions[token + '-ftx']['size']) / math.fabs(self.positions[token + '-binance']['size']) < 1.33:
+                         gogo = False
+                         if fut in self.blockers:
+                            if self.blockers[fut] == False:
+                                gogo = True
+                         else: 
+                            gogo = True    
+                         if gogo == True:
+                            print('ftxftx fut buy')
+                            self.ftx.createOrder( self.arbmult[token]['short'], "limit", 'buy', qty, self.get_bbo('ftx', self.arbmult[token]['short'])['bid'], {"newClientOrderId": "x-v0tiKJjj-" + self.randomword(15)}   )
+                             
+                #print(str(self.PCT_LIM_LONG[token]) + ' Ok! ' + ex + ' wins! They can long! ' + str(self.place_bids[token]) + ' ' + str(self.IM))
+                if ex == 'ftx' and self.arbmult[token]['short'] == 'ftx':
+                    afut = ""
+                    print(self.MAX_SKEW)
+                    print(qty * prc + skew_size[token])
+                    if (reducing == False and token in fut and  qty * prc + (skew_size[token]) > -1 * self.MAX_SKEW  and self.place_asks[token] == True) and (math.fabs(self.positions[token + '-ftx']['size']) / math.fabs(self.positions[token + '-binance']['size']) > 0.75):
+                        afut = fut
+                        if fut in self.maybes :
+                            if self.maybes[fut] == True and self.place_bids[token] == True:
+                                self.blockers[fut] = True
+                                self.maybes[fut] = False
+                                r = Timer(wait_seconds, self.resetBlocker, (token))
+                                print('block ' + token + ' for ' + str(wait_seconds))
+                                r.start()    
+                                
+                        print('ftx buy')
+                        gogo = False
+                        if fut in self.blockers:
+                            if self.blockers[fut] == False:
+                                gogo = True
+                        else: 
+                            gogo = True    
+                        if gogo == True: 
+                            self.ftx.createOrder(  fut + '-PERP', "limit", 'sell', qty, self.get_bbo('ftx', fut)['ask'], {"newClientOrderId": "x-v0tiKJjj-" + self.randomword(15)}   )
+                            
+                    
+                    print(qty * prc + -1 * skew_size[token])
+                    if  token in fut and  qty * prc + (skew_size[token]) <  self.MAX_SKEW and self.place_bids[token] == True and math.fabs(self.positions[token + '-ftx']['size']) / math.fabs(self.positions[token + '-binance']['size']) < 1.33:
+                         gogo = False
+                         if fut in self.blockers:
+                            if self.blockers[fut] == False:
+                                gogo = True
+                         else: 
+                            gogo = True    
+                         if gogo == True:
+                            print('ftxftx fut buy')
+                            self.ftx.createOrder( self.arbmult[token]['short'], "limit", 'buy', qty, self.get_bbo('ftx', self.arbmult[token]['short'])['bid'], {"newClientOrderId": "x-v0tiKJjj-" + self.randomword(15)}   )
+            # short fut long ex?
+            if self.arbmult[token]['short'] not in self.totrade:
+                print('short fut ' + self.arbmult[token]['short'] + ' long ex: ' + self.arbmult[token]['long'])
+                if ex == 'binance' and self.arbmult[token]['long'] == 'binance':
+                    afut = ""
+                    print(self.MAX_SKEW)
+                    print(qty * prc + skew_size[token])
+
+                    if (reducing == False and token in fut and  qty * prc + (skew_size[token]) <  self.MAX_SKEW  and self.place_bids[token] == True) and (math.fabs(self.positions[token + '-ftx']['size']) / math.fabs(self.positions[token + '-binance']['size']) < 1.33):
+                        afut = fut
+                        if fut in self.maybes :
+                            if self.maybes[fut] == True and self.place_bids[token] == True:
+                                self.blockers[fut] = True
+                                self.maybes[fut] = False
+                                r = Timer(wait_seconds, self.resetBlocker, (token))
+                                print('block ' + token + ' for ' + str(wait_seconds))
+                                r.start()    
+                                
+                        print('binbin buy a fut')
+                        gogo = False
+                        if fut in self.blockers:
+                            if self.blockers[fut] == False:
+                                gogo = True
+                        else: 
+                            gogo = True    
+                        if gogo == True: 
+                            self.binance.createOrder(  fut + '/USDT', "Limit", 'buy', qty, self.get_bbo('binance', fut)['bid'], {"newClientOrderId": "x-v0tiKJjj-" + self.randomword(15)})
+                        
+                    print(qty * prc + -1 * skew_size[token])
+                    if  token in fut and self.place_asks[token] == True and  qty * prc + (skew_size[token]) > -1 *  self.MAX_SKEWe and math.fabs(self.positions[token + '-ftx']['size']) / math.fabs(self.positions[token + '-binance']['size']) > 0.75:
+                         gogo = False
+                         if fut in self.blockers:
+                            if self.blockers[fut] == False:
+                                gogo = True
+                         else: 
+                            gogo = True    
+                         if gogo == True:
+                            print('ftxftx fut sell')
+                            self.ftx.createOrder( self.arbmult[token]['short'], "limit", 'sell', qty, self.get_bbo('ftx', self.arbmult[token]['short'])['ask'], {"newClientOrderId": "x-v0tiKJjj-" + self.randomword(15)}   )
+                             
+                #print(str(self.PCT_LIM_LONG[token]) + ' Ok! ' + ex + ' wins! They can long! ' + str(self.place_bids[token]) + ' ' + str(self.IM))
+                if ex == 'ftx' and self.arbmult[token]['long'] == 'ftx':
+                    afut = ""
+                    print(self.MAX_SKEW)
+                    print(qty * prc + skew_size[token])
+                    if (reducing == False and token in fut and  qty * prc + (skew_size[token]) <  self.MAX_SKEW  and self.place_bids[token] == True) and (math.fabs(self.positions[token + '-ftx']['size']) / math.fabs(self.positions[token + '-binance']['size']) < 1.33):
+                        afut = fut
+                        if fut in self.maybes :
+                            if self.maybes[fut] == True and self.place_bids[token] == True:
+                                self.blockers[fut] = True
+                                self.maybes[fut] = False
+                                r = Timer(wait_seconds, self.resetBlocker, (token))
+                                print('block ' + token + ' for ' + str(wait_seconds))
+                                r.start()    
+                                
+                        print('ftx buy')
+                        gogo = False
+                        if fut in self.blockers:
+                            if self.blockers[fut] == False:
+                                gogo = True
+                        else: 
+                            gogo = True    
+                        if gogo == True: 
+                            self.ftx.createOrder(  fut + '-PERP', "limit", 'buy', qty, self.get_bbo('ftx', fut)['bid'], {"newClientOrderId": "x-v0tiKJjj-" + self.randomword(15)}   )
+                            
+                    
+                    print(qty * prc + -1 * skew_size[token])
+                    if  token in fut and self.place_asks[token] == True and  qty * prc + (skew_size[token]) > -1 *  self.MAX_SKEW and math.fabs(self.positions[token + '-ftx']['size']) / math.fabs(self.positions[token + '-binance']['size']) > 0.75:
+                         gogo = False
+                         if fut in self.blockers:
+                            if self.blockers[fut] == False:
+                                gogo = True
+                         else: 
+                            gogo = True    
+                         if gogo == True:
+                            print('ftxftx fut sell')
+                            self.ftx.createOrder( self.arbmult[token]['short'], "limit", 'sell', qty, self.get_bbo('ftx', self.arbmult[token]['short'])['ask'], {"newClientOrderId": "x-v0tiKJjj-" + self.randomword(15)}   )
+                               
         # Long add on winning ex, short other ex - or rather 
             if ex == self.arbmult[token]['long']:     
                 #print(str(self.PCT_LIM_LONG[token]) + ' Ok! ' + ex + ' wins! They can long! ' + str(self.place_bids[token]) + ' ' + str(self.IM))
@@ -774,7 +980,7 @@ class MarketMaker( object ):
                             self.binance.createOrder(  fut + '/USDT', "Limit", 'buy', qty, self.get_bbo('binance', fut)['ask'], {"newClientOrderId": "x-v0tiKJjj-" + self.randomword(15)})
                         
                     print(qty * prc + -1 * skew_size[token])
-                    if  token in fut and self.place_asks[token] == True and self.place_bids[token] == True and math.fabs(self.positions[token + '-ftx']['size']) / math.fabs(self.positions[token + '-binance']['size']) > 0.66:
+                    if  token in fut and self.place_asks[token] == True and  qty * prc + (skew_size[token]) > -1 *  self.MAX_SKEW and math.fabs(self.positions[token + '-ftx']['size']) / math.fabs(self.positions[token + '-binance']['size']) > 0.75:
                          gogo = False
                          if fut in self.blockers:
                             if self.blockers[fut] == False:
@@ -812,7 +1018,7 @@ class MarketMaker( object ):
                             
                     
                     print(qty * prc + -1 * skew_size[token])
-                    if  token in fut and self.place_asks[token] == True and self.place_bids[token] == True and math.fabs(self.positions[token + '-ftx']['size']) / math.fabs(self.positions[token + '-binance']['size']) > 0.66:
+                    if  token in fut and self.place_asks[token] == True and  qty * prc + (skew_size[token]) > -1 *  self.MAX_SKEW and math.fabs(self.positions[token + '-ftx']['size']) / math.fabs(self.positions[token + '-binance']['size']) > 0.75:
                          gogo = False
                          if fut in self.blockers:
                             if self.blockers[fut] == False:
@@ -938,6 +1144,7 @@ class MarketMaker( object ):
                 self.place_orders('binance', token)
                 
                 self.place_orders('ftx', token)
+            self.update_positions()
             for token in self.futures:
                 token = token.split('-')[0]
                 self.place_orders('binance', token)
