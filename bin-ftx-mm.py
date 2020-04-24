@@ -343,17 +343,52 @@ class MarketMaker( object ):
         pprint('t: ' + str(t))
         tdaily = 0
         test = 0
-        
+        ohlcvt = 0
+        ohlcvc = 0
+        ohlcvVolumes = {}
+        ohlcvh = 0
+        ohlcvl = 9999999999999999999999999
         for arb in self.arbmult:
-            ohlcv = self.ftx.fetchOHLCV({'symbol': arb + '-PERP', 'timeframe':'1h', 'limit': 1})
-            print(ohlcv)
-            self.arbmult[arb]['perc'] = round(self.arbmult[arb]['arb'] / t * 1000) / 1000 #* 1.41425
-            self.arbmult[arb]['amt'] = round(exposure * self.arbmult[arb]['perc'] * 1000) / 1000
-            self.arbmult[arb]['daily'] = round(self.arbmult[arb]['amt'] * self.arbmult[arb]['arb'] * 1000) / 1000
-            
-            self.arbmult[arb]['daily fees'] = self.arbmult[arb]['daily'] * fees
-            self.arbmult[arb]['daily - fees'] = self.arbmult[arb]['daily'] - self.arbmult[arb]['daily fees']
-            tdaily = tdaily + self.arbmult[arb]['daily - fees']
+            if self.arbmult[arb]['arb'] > minArb:
+                ohlcv = self.ftx.fetchOHLCV(arb + '-PERP', '1h')
+
+                if ohlcv[-1][4] * ohlcv[-1][5] > ohlcvh:
+                    ohlcvh = ohlcv[-1][4] * ohlcv[-1][5]
+                if ohlcv[-1][4] * ohlcv[-1][5] < ohlcvl:
+                    ohlcvl = ohlcv[-1][4] * ohlcv[-1][5]
+                ohlcvVolumes[arb] = ohlcv[-1][4] * ohlcv[-1][5]
+                ohlcvt = ohlcvt + (ohlcv[-1][4] * ohlcv[-1][5])
+
+                ohlcvc = ohlcvc + 1
+            else:
+                ohlcvVolumes[arb] = 0
+        for arb in self.arbmult:
+            if ohlcvVolumes[arb] < ohlcvavg / 2:
+                t = t - self.arbmult[arb]['arb']
+                c = c - 1
+        ohlcvt = ohlcvt - ohlcvh
+        ohlcvt = ohlcvt - ohlcvl
+        ohlcvc = ohlcvc - 2
+        print('ohlcv count (less outliers)')
+        print(ohlcvc)
+        print('ohlcv total (less outliers)')
+        print(ohlcvt)
+
+        print('ohlcv avg (less outliers)')
+        ohlcvavg = ohlcvt / ohlcvc
+        print(ohlcvavg)
+        for arb in self.arbmult:
+            if ohlcvVolumes[arb] > ohlcvavg / 2:
+                self.arbmult[arb]['perc'] = round(self.arbmult[arb]['arb'] / t * 1000) / 1000 #* 1.41425
+                self.arbmult[arb]['amt'] = round(exposure * self.arbmult[arb]['perc'] * 1000) / 1000
+                self.arbmult[arb]['daily'] = round(self.arbmult[arb]['amt'] * self.arbmult[arb]['arb'] * 1000) / 1000
+                
+                self.arbmult[arb]['daily fees'] = self.arbmult[arb]['daily'] * fees
+                self.arbmult[arb]['daily - fees'] = self.arbmult[arb]['daily'] - self.arbmult[arb]['daily fees']
+                tdaily = tdaily + self.arbmult[arb]['daily - fees']
+            else:
+                self.arbmult[arb]['perc'] = 0
+                print(arb + ' less than half the avg ohlcv volume (less outliers)! Arbmult percentage of total 0!')
         pprint(self.arbmult)
         returns = round((tdaily / bal) * 1000000) / 10000
         ##print('assuming $' + str(bal) + ' balance and ' + str(lev) + 'x leverage, and ' + str(fees * 100) + '% fees for a roundtrip as maker to buy/sell the exposure: ')

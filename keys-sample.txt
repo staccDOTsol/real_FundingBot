@@ -1,0 +1,6 @@
+{"deribit":{"key": "",
+ "secret": ""},
+ "bitmex": {"key": "",
+ "secret": ""},
+ "bybit": {"key": "", "secret": ""}
+ }

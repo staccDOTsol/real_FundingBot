@@ -1,0 +1,39 @@
+#!/bin/bash
+
+while :
+do
+OUTPUT=$(ps -aux | grep -cE "python3.7 -c")
+
+if (( OUTPUT > 1 )); then
+    echo "python3 is running"
+	sleep 30s
+else
+    echo "python3 is not running"
+	
+    nohup pwhile :
+do
+OUTPUT=$(ps -aux | grep -cE "python3 indexer.py")
+
+if (( OUTPUT > 1 )); then
+    echo "python3 is running"
+	sleep 30s
+else
+    echo "python3 is not running"
+	
+    sudo nohup python3 indexer.py &
+fi
+
+
+done
+
+fi
+
+
+done
+
+
+python -c 'import market_maker; market_maker.run()'
+
+
+
+
