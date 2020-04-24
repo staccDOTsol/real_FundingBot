@@ -328,7 +328,7 @@ class MarketMaker( object ):
                     pprint(ftx - minArb)
                     pprint(binance - minArb)
         pprint(minArb)
-        pprint(self.arbmult)
+        print(self.arbmult)
         t = 0
         c = 0
         bal = self.bals['total']
@@ -343,7 +343,10 @@ class MarketMaker( object ):
         pprint('t: ' + str(t))
         tdaily = 0
         test = 0
+        
         for arb in self.arbmult:
+            ohlcv = self.ftx.fetchOHLCV({'symbol': arb + '-PERP', 'timeframe':'1h', 'limit': 1})
+            print(ohlcv)
             self.arbmult[arb]['perc'] = round(self.arbmult[arb]['arb'] / t * 1000) / 1000 #* 1.41425
             self.arbmult[arb]['amt'] = round(exposure * self.arbmult[arb]['perc'] * 1000) / 1000
             self.arbmult[arb]['daily'] = round(self.arbmult[arb]['amt'] * self.arbmult[arb]['arb'] * 1000) / 1000
@@ -384,7 +387,7 @@ class MarketMaker( object ):
         #0.0011
         #119068
         totlev = 0
-        pprint(self.LEV_LIM_SHORT)
+        print(self.LEV_LIM_SHORT)
         for lev in self.LEV_LIM_SHORT:
             totlev = totlev + self.LEV_LIM_SHORT[lev]
         pprint('totlev: ' + str(totlev))
