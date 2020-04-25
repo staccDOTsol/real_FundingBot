@@ -72,7 +72,7 @@ binkey     = os.environ["binkey"]#"VC4d7Pj1"
 binsecret  = os.environ['binsecret']#"#"IB4VEP26OzTNUt4JhNILOW9aDuzctbGs_K6izxQG2dI"
 URL     = 'https://www.deribit.com'
 binance_websocket_api_manager = BinanceWebSocketApiManager(exchange="binance.com-futures")
-3.set_private_api_config(binkey, binsecret)
+binance_websocket_api_manager.set_private_api_config(binkey, binsecret)
 userdata_stream_id = binance_websocket_api_manager.create_stream(["!userData"], ["arr"])
 EWMA_WGT_LOOPTIME   = 2.5    
 BP                  = 1e-4      # one basis point
