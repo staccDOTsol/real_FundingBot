@@ -193,11 +193,11 @@ class MarketMaker( object ):
         self.PCT_LIM_SHORT = {}
         self.LEV_LIM_LONG = {}
         self.LEV_LIM_SHORT = {}
-        self.LEVERAGE_LIMIT_SHORT = 5
-        self.LEVERAGE_LIMIT_LONG = 5
-        self.INITIAL_MARGIN_LIMIT_LONG        = 10       # % position limit long
+        self.LEVERAGE_LIMIT_SHORT = 2
+        self.LEVERAGE_LIMIT_LONG = 2
+        self.INITIAL_MARGIN_LIMIT_LONG        = 4   # % position limit long
 
-        self.INITIAL_MARGIN_LIMIT_SHORT       = 10
+        self.INITIAL_MARGIN_LIMIT_SHORT       = 4
         for token in self.exchangeRates:
             self.PCT_LIM_LONG[token]        = self.INITIAL_MARGIN_LIMIT_LONG 
             self.PCT_LIM_SHORT[token]       = self.INITIAL_MARGIN_LIMIT_SHORT    
@@ -230,7 +230,7 @@ class MarketMaker( object ):
         self.bidsleftbefore = {}
         self.asksleftbefore = {}
         self.doneFuts = []
-        self.MAX_LAYERS          =  2        # max orders to layer the ob with on each side
+        self.MAX_LAYERS          =  1        # max orders to layer the ob with on each side
 
         self.exfuts = {}
         #self.orderStates = {}
@@ -803,7 +803,7 @@ class MarketMaker( object ):
             
             
             bid0            = bid_mkt
-            newbids    = [ bid0 * riskfac ** -i for i in range( 1, int(self.MAX_LAYERS) ) ]
+            newbids    = [ bid0 * riskfac ** -i for i in range( 1, int(self.MAX_LAYERS) + 1 ) ]
          
 
             newbids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
@@ -812,7 +812,7 @@ class MarketMaker( object ):
 
             ask0            = ask_mkt
              
-            newasks    = [ ask0 * riskfac ** i for i in range( 1, int(self.MAX_LAYERS) ) ]
+            newasks    = [ ask0 * riskfac ** i for i in range( 1, int(self.MAX_LAYERS)+ 1 ) ]
             prc = asks[0]
             newasks[ 0 ]   = ticksize_floor( asks[ 0 ], tsz )
             for ask in newasks:
@@ -1352,8 +1352,8 @@ class MarketMaker( object ):
         
         place_bids = True
         place_asks = True
-        extraPrint(False, fut + 'im: ' + str(self.IM) + ' lim long: ' + str(self.PCT_LIM_LONG[token]) + ' lim short: ' + str(self.PCT_LIM_SHORT[token]))
-        extraPrint(False, fut + ' lev: ' + str(self.LEV) + ' lim long: ' + str(self.LEV_LIM_LONG[token]) + ' lim short: ' + str(self.LEV_LIM_SHORT[token]))
+        print(fut + 'im: ' + str(self.IM) + ' lim long: ' + str(self.PCT_LIM_LONG[token]) + ' lim short: ' + str(self.PCT_LIM_SHORT[token]))
+        print(fut + ' lev: ' + str(self.LEV) + ' lim long: ' + str(self.LEV_LIM_LONG[token]) + ' lim short: ' + str(self.LEV_LIM_SHORT[token]))
         #if self.IM > self.PCT_LIM_LONG[token]:
         #    place_bids = False
         #    nbids = 0
@@ -1418,7 +1418,7 @@ class MarketMaker( object ):
         if self.qty > self.maxqty:
             self.maxqty = self.qty
         self.MAX_SKEW = self.MAX_SKEW_OLD
-        self.MAX_SKEW = self.qty * 5.5
+        self.MAX_SKEW = self.qty * 2.25
         
         
           
@@ -1707,7 +1707,8 @@ class MarketMaker( object ):
          
               
         if not place_bids and not place_asks:
-            #print('min asks bids 3: ' + str(self.asksleft[self.futtoks[token][ex]]) + ', ' + str(self.bidsleft[self.futtoks[token][ex]]))
+            print('not place asks or bids')
+            print('min asks bids 3: ' + str(self.asksleft[self.futtoks[token][ex]]) + ', ' + str(self.bidsleft[self.futtoks[token][ex]]))
             try:
                 prc = self.get_bbo(ex, fut)['bid']
             except Exception as e:
@@ -1720,7 +1721,7 @@ class MarketMaker( object ):
             if self.qty > self.maxqty:
                 self.maxqty = self.qty
             self.MAX_SKEW = self.MAX_SKEW_OLD
-            self.MAX_SKEW = self.qty * 5.5
+            self.MAX_SKEW = self.qty * 2.25
             extraPrint(False, token + ', ' + ex + ' qty: ' + str(self.qty / 10))
             if self.positions[self.futtoks[token][ex]]['size'] >= 0:
                 if ex == 'bitmex':
@@ -1736,6 +1737,7 @@ class MarketMaker( object ):
                                     r2.start()
                                     #self.domex = False
                                     r = self.mex.Order.Order_newBulk(orders=json.dumps(mexAsks)).result()
+                                    print(r)
                 for i in range(self.asksleft[self.futtoks[token][ex]], round(self.MAX_LAYERS)):
                     #print('sell over max ' + str(i))
                     extraPrint(False, self.len_ask_ords[fut])
@@ -1749,10 +1751,12 @@ class MarketMaker( object ):
                             if  self.asksleft[self.futtoks[token][ex]] <= self.MAX_LAYERS:
                                 if self.qty + skew_size[token] * -1 <= self.MAX_SKEW:
                                     r = self.client.sell( self.futtoks[token]['deribit'], round(self.qty / 10),asks[i], 'true' )
+                                    print(r)
                         else:
                             if  self.asksleft[self.futtoks[token][ex]] <= self.MAX_LAYERS:
                                 if self.qty + skew_size[token] * -1 <= self.MAX_SKEW:
                                     r = self.client.sell( self.futtoks[token]['deribit'], round(self.qty),asks[i], 'true' )
+                                    print(r)
                     if ex == 'bybit':
                         extraPrint(False, self.len_ask_ords)
                         extraPrint(False, self.len_ask_ords[self.futtoks[token]['bybit']])
@@ -1760,6 +1764,7 @@ class MarketMaker( object ):
                             if self.qty + skew_size[token] * -1 <= self.MAX_SKEW:
                                 r = self.bit.Order.Order_new(side="Sell",symbol=self.futtoks[token]['bybit'].replace('-bybit', ''),order_type="Limit",qty=self.qty,price=asks[i],time_in_force="PostOnly").result()
                   
+                                print(r)
 
             if self.positions[self.futtoks[token][ex]]['size'] <= 0:
                 if self.qty + skew_size[token] <= self.MAX_SKEW:
@@ -1777,6 +1782,7 @@ class MarketMaker( object ):
                                     #self.domex = False
                                     r = self.mex.Order.Order_newBulk(orders=json.dumps(mexBids)).result()
                                     #print(r)
+                                    print(r)
                 for i in range(self.bidsleft[self.futtoks[token][ex]], round(self.MAX_LAYERS)):
                     #print('buy over max ' + str(i))
 
@@ -1792,21 +1798,22 @@ class MarketMaker( object ):
                             if  self.bidsleft[self.futtoks[token][ex]] <= self.MAX_LAYERS:
                                 if self.qty + skew_size[token] <= self.MAX_SKEW:
                                     r = self.client.buy( self.futtoks[token]['deribit'], round(self.qty / 10),bids[i], 'true' )
+                                    print(r)
                         else:
                             if  self.bidsleft[self.futtoks[token][ex]] <= self.MAX_LAYERS:
                                 if self.qty + skew_size[token] <= self.MAX_SKEW:
                                     r = self.client.buy( self.futtoks[token]['deribit'], round(self.qty),bids[i], 'true' )
                         
+                                    print(r)
                     if ex == 'bybit':
                         if  True:
                             if self.qty + skew_size[token] <= self.MAX_SKEW:
                                 r = self.bit.Order.Order_new(side="Buy",symbol=self.futtoks[token]['bybit'].replace('-bybit', ''),order_type="Limit",qty=self.qty,price=bids[i],time_in_force="PostOnly").result()
                       
 
-            
             #print( 'No bid no offer for ' + fut + " " + ex)
             
-             
+        return    
         #print(r)
         extraPrint(False, 'fut: ' + fut)    
         tsz = self.get_ticksize( fut )            
@@ -1865,7 +1872,7 @@ class MarketMaker( object ):
         
         extraPrint(False, token + ', ' + ex + ' qty: ' + str(self.qty / 10))
         self.MAX_SKEW = self.MAX_SKEW_OLD
-        self.MAX_SKEW = self.qty * 5.5
+        self.MAX_SKEW = self.qty * 2.25
 
         
         
