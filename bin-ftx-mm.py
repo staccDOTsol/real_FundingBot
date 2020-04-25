@@ -1,6 +1,5 @@
 # This code is for sample purposes only, comes as is and with no warranty or guarantee of performance
-from bitmex_websocket import BitMEXWebsocket
-            linecache
+import linecaxhe
 import sys
 import threading
 import time
@@ -1442,7 +1441,7 @@ class MarketMaker( object ):
                 ###print(pos)
                 pos['symbol'] = pos['symbol'].replace('USDT', '').replace('USD', '')
                 pos['size'] = float(pos['positionAmt']) * self.get_spot(pos['symbol'])
-                #if pos['size'] == 0:
+                #if pos['size'] == 0:   
                 #    pos['size'] = 1
                 pos['floatingPl'] = float(pos['unRealizedProfit']) 
                 if pos['size'] != 0:
