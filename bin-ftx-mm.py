@@ -71,11 +71,11 @@ parser.add_argument( '--no-restart',
 
 args    = parser.parse_args()
 
-ftxKEY     = "NqOlVRaqGM-XCX0cpf67UYxvT2tcB56SHlS-tlB-"#"VC4d7Pj1"
-ftxSECRET  = "E-T228w_hSgnBQZHa8-cT1E-p0YyNqHkx9Y_8bdk"#"IB4VEP26OzTNUt4JhNILOW9aDuzctbGs_K6izxQG2dI"
+ftxKEY     = proces.environ["ftxkey"]#"NqOlVRaqGM-XCX0cpf67UYxvT2tcB56SHlS-tlB-"#"VC4d7Pj1"
+ftxSECRET  = proces.environ["ftxsecret"]#gnBQZHa8-cT1E-p0YyNqHkx9Y_8bdk"#"IB4VEP26OzTNUt4JhNILOW9aDuzctbGs_K6izxQG2dI"
 
-binKEY     = "9mHe8kS2qvLMmOzSRxxI3NMTlkgCxJIx11EFfWD1CqnyN1GhhPpLl9o0WGGLIGwT"#"VC4d7Pj1"
-binSECRET  = "tqj3y1hvr8u3Ni1ZwLkYdbJDV8AG0PZoSciW4pWzO6Ci8h6TAonvTcL8es5cmq2L"#"IB4VEP26OzTNUt4JhNILOW9aDuzctbGs_K6izxQG2dI"
+binKEY     = proces.environ["binkey"]#"VC4d7Pj1"
+binSECRET  = proces.environ['binsecret']#"#"IB4VEP26OzTNUt4JhNILOW9aDuzctbGs_K6izxQG2dI"
 URL     = 'https://www.deribit.com'
 binance_websocket_api_manager = BinanceWebSocketApiManager(exchange="binance.com-futures")
 binance_websocket_api_manager.set_private_api_config(binKEY, binSECRET)
@@ -766,7 +766,7 @@ class MarketMaker( object ):
         precision = self.get_precision(token)
         self.qty = max( 3 / 10 ** precision, round(self.qty * (10 ** precision)) / 10 ** precision)
         self.MAX_SKEW = self.qty * prc * 1.5
-        
+            
 
         
         self.MAX_SKEW = self.MAX_SKEW * self.blocktrues
