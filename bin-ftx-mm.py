@@ -1,6 +1,6 @@
 # This code is for sample purposes only, comes as is and with no warranty or guarantee of performance
 from bitmex_websocket import BitMEXWebsocket
-import linecache
+            linecache
 import sys
 import threading
 import time
@@ -39,12 +39,7 @@ import argparse, logging, math, os, pathlib, sys, time, traceback
 import ccxt
 import random
 
-try:
-    from deribit_api    import RestClient
-except ImportError:
-    ###print("Please install the deribit_api pacakge", file=sys.stderr)
-    ###print("    pip3 install deribit_api", file=sys.stderr)
-    exit(1)
+
 
 # Add command line switches
 parser  = argparse.ArgumentParser( description = 'Bot' )
@@ -1437,7 +1432,21 @@ class MarketMaker( object ):
                 'averagePrice': None,
                 'floatingPl': 0}
 
-                
+        if ex == 'binance':
+            positions       = self.binance.fapiPrivateGetPositionRisk()
+            ###print('lala')
+            ###print(positions)
+            ###print(self.futures)
+            for pos in positions:
+                ###print('binance pos')
+                ###print(pos)
+                pos['symbol'] = pos['symbol'].replace('USDT', '').replace('USD', '')
+                pos['size'] = float(pos['positionAmt']) * self.get_spot(pos['symbol'])
+                #if pos['size'] == 0:
+                #    pos['size'] = 1
+                pos['floatingPl'] = float(pos['unRealizedProfit']) 
+                if pos['size'] != 0:
+                    self.positions[ pos[ 'symbol' ] + '-binance'] = pos       
         try:
             positions       = self.ftx.privateGetPositions()['result']
             ###print(self.futures)
