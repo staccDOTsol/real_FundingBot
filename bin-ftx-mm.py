@@ -39,12 +39,7 @@ import argparse, logging, math, os, pathlib, sys, time, traceback
 import ccxt
 import random
 
-try:
-    from deribit_api    import RestClient
-except ImportError:
-    ###print("Please install the deribit_api pacakge", file=sys.stderr)
-    ###print("    pip3 install deribit_api", file=sys.stderr)
-    exit(1)
+
 
 # Add command line switches
 parser  = argparse.ArgumentParser( description = 'Bot' )
@@ -71,11 +66,11 @@ parser.add_argument( '--no-restart',
 
 args    = parser.parse_args()
 
-ftxKEY     = proces.environ["ftxkey"]#"NqOlVRaqGM-XCX0cpf67UYxvT2tcB56SHlS-tlB-"#"VC4d7Pj1"
-ftxSECRET  = proces.environ["ftxsecret"]#gnBQZHa8-cT1E-p0YyNqHkx9Y_8bdk"#"IB4VEP26OzTNUt4JhNILOW9aDuzctbGs_K6izxQG2dI"
+ftxKEY     = os.environ["ftxkey"]#"NqOlVRaqGM-XCX0cpf67UYxvT2tcB56SHlS-tlB-"#"VC4d7Pj1"
+ftxSECRET  = os.environ["ftxsecret"]#gnBQZHa8-cT1E-p0YyNqHkx9Y_8bdk"#"IB4VEP26OzTNUt4JhNILOW9aDuzctbGs_K6izxQG2dI"
 
-binKEY     = proces.environ["binkey"]#"VC4d7Pj1"
-binSECRET  = proces.environ['binsecret']#"#"IB4VEP26OzTNUt4JhNILOW9aDuzctbGs_K6izxQG2dI"
+binKEY     = os.environ["binkey"]#"VC4d7Pj1"
+binSECRET  = os.environ['binsecret']#"#"IB4VEP26OzTNUt4JhNILOW9aDuzctbGs_K6izxQG2dI"
 URL     = 'https://www.deribit.com'
 binance_websocket_api_manager = BinanceWebSocketApiManager(exchange="binance.com-futures")
 binance_websocket_api_manager.set_private_api_config(binKEY, binSECRET)
@@ -1418,6 +1413,24 @@ class MarketMaker( object ):
                 'averagePrice': None,
                 'floatingPl': 0}
 
+
+        if ex == 'binance':
+            positions       = self.binance.fapiPrivateGetPositionRisk()
+            ###print('lala')
+            ###print(positions)
+            ###print(self.futures)
+            for pos in positions:
+                ###print('binance pos')
+                ###print(pos)
+                pos['symbol'] = pos['symbol'].replace('USDT', '').replace('USD', '')
+                pos['size'] = float(pos['positionAmt']) * self.get_spot(pos['symbol'])
+                #if pos['size'] == 0:
+                #    pos['size'] = 1
+                pos['floatingPl'] = float(pos['unRealizedProfit']) 
+                if pos['size'] != 0:
+        
+                    self.positions[ pos[ 'symbol' ] + '-binance'] = pos       
+        ex='ftx'
         try:
             positions       = self.ftx.privateGetPositions()['result']
             ###print(self.futures)
