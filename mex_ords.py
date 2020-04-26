@@ -40,7 +40,7 @@ while True:
                     #print('mex order')
 
                     order['status'] = 'new'
-                       
+
                     
                     order['name'] = market_maker.mmbot.futtoks[token][ex]
                     if order[ 'side' ].lower() == 'buy':
@@ -48,9 +48,10 @@ while True:
                     elif order[ 'side' ].lower() == 'sell':
                         addAskOrders.append(order)
                 
-        
-            ask_ords.update({'name': market_maker.mmbot.futtoks[token][ex]}, {'name': market_maker.mmbot.futtoks[token][ex],'asks':addAskOrders}, upsert=True);
-            bid_ords.update({'name': market_maker.mmbot.futtoks[token][ex]}, {'name': market_maker.mmbot.futtoks[token][ex],"bids":addBidOrders}, upsert=True);
+            if len(addAskOrders) > 0:
+                ask_ords.update({'name': market_maker.mmbot.futtoks[token][ex]}, {'name': market_maker.mmbot.futtoks[token][ex],'asks':addAskOrders}, upsert=True);
+            if len(addBidOrders) > 0:
+                bid_ords.update({'name': market_maker.mmbot.futtoks[token][ex]}, {'name': market_maker.mmbot.futtoks[token][ex],"bids":addBidOrders}, upsert=True);
 
     
     except Exception as e:
