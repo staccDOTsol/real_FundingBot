@@ -3,12 +3,12 @@ var btc = 0;
 const ccxt = require('ccxt')
           
         ftx     = new ccxt.ftx({
-            'apiKey': "E4K2syhCrHK1eIGfd2aaV9c6ee0n1qRKt1khrAHa",   
-            'secret': "r6lUTsBdqdT6HYt66RyGK5qHAE6TURW8vyhXJtR2",
+            'apiKey': process.env.ftxKEY,   
+            'secret': process.env.ftxSECRET,
         })
         client     = new ccxt.binance({
-            'apiKey': "xRWimnhkpmr24gt12EQLYTT6TU8O1mK559E4HovZ2auP50JDtvhhQvVmaoRfCaoq",
-            'secret': "WsGLywb8ty4L3p5OWIH62ItgTRULtLvywvmIkxsVXjLVISHyNojlAt48omP3UXvb",
+            'apiKey': process.env.binKEY,
+            'secret': process.env.binSECRET,
             "options":{"defaultMarket":"futures"},
             'urls': {'api': {
                                      'public': 'https://fapi.binance.com/fapi/v1',
@@ -17,8 +17,8 @@ const ccxt = require('ccxt')
 
 var client2 = new ccxt.deribit(
 
-            {"apiKey": "5HkSPCwo",
-            "secret": "z5fHc3FFB_SrVmEK6z0Unc-CjtHVU9_5pNMCdbXw_K0"
+            {"apiKey": "",
+            "secret": ""
  })
 //client.urls['api'] = client.urls['test']
 var usd2 = 0

@@ -7,6 +7,7 @@ import time
 from queue import Queue
 import random, string
 import datetime
+from datetime import timedelta
 
 from threading import Timer
 
@@ -76,11 +77,11 @@ parser.add_argument( '--no-restart',
 
 args    = parser.parse_args()
 
-ftxKEY     = "E4K2syhCrHK1eIGfd2aaV9c6ee0n1qRKt1khrAHa"#os.environ["ftxkey"]#"NqOlVRaqGM-XCX0cpf67UYxvT2tcB56SHlS-tlB-"#"VC4d7Pj1"
-ftxSECRET  = "r6lUTsBdqdT6HYt66RyGK5qHAE6TURW8vyhXJtR2"#os.environ["ftxsecret"]#gnBQZHa8-cT1E-p0YyNqHkx9Y_8bdk"#"IB4VEP26OzTNUt4JhNILOW9aDuzctbGs_K6izxQG2dI"
+ftxKEY     = os.environ["ftxkey"]#"NqOlVRaqGM-XCX0cpf67UYxvT2tcB56SHlS-tlB-"#"VC4d7Pj1"
+ftxSECRET  =os.environ["ftxsecret"]#gnBQZHa8-cT1E-p0YyNqHkx9Y_8bdk"#"IB4VEP26OzTNUt4JhNILOW9aDuzctbGs_K6izxQG2dI"
 
-binKEY     = "xRWimnhkpmr24gt12EQLYTT6TU8O1mK559E4HovZ2auP50JDtvhhQvVmaoRfCaoq"#os.environ["binkey"]#"VC4d7Pj1"
-binSECRET  = "WsGLywb8ty4L3p5OWIH62ItgTRULtLvywvmIkxsVXjLVISHyNojlAt48omP3UXvb"#os.environ['binsecret']#"#"IB4VEP26OzTNUt4JhNILOW9aDuzctbGs_K6izxQG2dI"
+binKEY     = os.environ["binkey"]#"VC4d7Pj1"
+binSECRET  = os.environ['binsecret']#"#"IB4VEP26OzTNUt4JhNILOW9aDuzctbGs_K6izxQG2dI"
 URL     = 'https://www.deribit.com'
 binance_websocket_api_manager = BinanceWebSocketApiManager(exchange="binance.com-futures")
 binance_websocket_api_manager.set_private_api_config(binKEY, binSECRET)
@@ -130,11 +131,11 @@ class MarketMaker( object ):
         self.LEV_LIM_LONG = {}
         self.LEV_LIM_SHORT = {}
         
-        self.LEV_LIM_SHORT_OLD = 6
-        self.LEV_LIM_LONG_OLD = 6
-        self.PCT_LIM_LONG_OLD        = 6       # % position limit long
+        self.LEV_LIM_SHORT_OLD = float(os.environ['limit'])
+        self.LEV_LIM_LONG_OLD = float(os.environ['limit'])
+        self.PCT_LIM_LONG_OLD        = float(os.environ['limit']) * 2       # % position limit long
 
-        self.PCT_LIM_SHORT_OLD       = 6
+        self.PCT_LIM_SHORT_OLD       = float(os.environ['limit']) * 2
         self.equity_usd         = None
         self.equity_btc         = None
         self.equity_usd_init    = None
@@ -151,6 +152,7 @@ class MarketMaker( object ):
         self.LEV = 1
         self.IM = 1
         self.ccxt = None
+        self.start_time         = datetime.datetime.utcnow()
         self.bin_futures = {}
         self.notperps = []
         self.rateCounter = 9
@@ -189,6 +191,7 @@ class MarketMaker( object ):
         sleep(10)
     def update_bin_pos ( self ):
         while True:
+            sleep(3)
             try:
                 
                 ex = ''
@@ -422,10 +425,10 @@ class MarketMaker( object ):
                 coins.append(coin)
         
         for coin in coins:
-            self.PCT_LIM_LONG[coin]        = 4      # % position limit long
-            self.LEV_LIM_LONG[coin] = 6
-            self.LEV_LIM_SHORT[coin] = 6
-            self.PCT_LIM_SHORT[coin]       = 4    # % position limit short
+            self.PCT_LIM_LONG[coin]        = float(os.environ['limit']) * 2      # % position limit long
+            self.LEV_LIM_LONG[coin] = float(os.environ['limit'])
+            self.LEV_LIM_SHORT[coin] = float(os.environ['limit'])
+            self.PCT_LIM_SHORT[coin]       = float(os.environ['limit']) * 2    # % position limit short
         for coin in coins:
             self.LEV_LIM_LONG[coin] = self.LEV_LIM_LONG[coin] * self.arbmult[coin]['perc'] 
             self.LEV_LIM_SHORT[coin] = self.LEV_LIM_SHORT[coin] * self.arbmult[coin]['perc'] 
@@ -444,6 +447,7 @@ class MarketMaker( object ):
     def update_balances( self ):
         
         bal2 = self.ftx.fetchBalance()
+        print(bal2)
         bal = bal2[ 'USDT' ] [ 'total' ]
         marginftx = 0.1
         marginbinance = 0.1
@@ -1320,7 +1324,7 @@ class MarketMaker( object ):
     def restart( self ):        
         try:
             strMsg = 'RESTARTING'
-            ##print( strMsg )
+            print( strMsg )
             
             for fut in self.futures:
                 self.cancelall(fut, 'ftx')
@@ -1330,8 +1334,10 @@ class MarketMaker( object ):
             strMsg += ' '
             for i in range( 0, 5 ):
                 strMsg += '.'
-                ###print( strMsg )
+                print( strMsg )
                 sleep( 1 )
+            #mmbot = MarketMaker( monitor = args.monitor, output = args.output )
+            #mmbot.run()
         except:
             PrintException()
             pass
@@ -1386,7 +1392,10 @@ class MarketMaker( object ):
             self.get_bin_futures()
             self.update_balances()
             
+            self.update_status()
             
+            self.equity_usd_init    = self.equity_usd
+            self.equity_btc_init    = self.equity_btc
                     
             self.logger = get_logger( 'root', LOG_LEVEL )
             # Get all futures contracts
@@ -1395,6 +1404,20 @@ class MarketMaker( object ):
             #self.update_positions() 
             t = threading.Thread(name='positions',target=self.update_bin_pos, args=())
             t.start()
+            delta = timedelta(minutes=30)
+            nearly_one_day = (self.start_time + delta)
+            wait_seconds = (nearly_one_day - self.start_time).seconds  
+            print(' ')
+            print(' ')
+            print(' ')
+            print(' ')
+            print('restarting after ' + str(wait_seconds) + ' seconds!')
+            print(' ')
+            print(' ')
+            print(' ')
+            print(' ')
+            r = Timer(wait_seconds, self.restart, ())
+            r.start()
             positions       = self.binance.fapiPrivateGetPositionRisk()
             ###print('lala')
             ###print(positions)
@@ -1422,7 +1445,7 @@ class MarketMaker( object ):
             self.equity_usd_init    = self.equity_usd
             self.equity_btc_init    = self.equity_btc
         except:
-            abc=123
+            PrintException()
     def update_status( self ):
         
                       
