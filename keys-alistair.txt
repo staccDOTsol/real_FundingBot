@@ -1,0 +1,6 @@
+{"deribit":{"key": "7x5cttEC",
+ "secret": "h_xxD-huOZOyNWouHh_yQnRyMkKyQyUv-EX96ReUHmM"},
+ "bitmex": {"key": "uU7X0zm0rzZfjTfXtUaSe7Y0",
+ "secret": "8Try2o5wlYMeIvrK3PqhIrSPYpYsv9XfvJEjJ3140RtKzNnF"},
+ "bybit": {"key": "tGLSF3rwSDkk8ScWym", "secret": "fm4zTEhKBrcTetQWK0v5fNzxazsTy9d6ANKn"}
+ }

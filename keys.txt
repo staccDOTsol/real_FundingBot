@@ -1,6 +1,6 @@
-{"deribit":{"key": "ucHSZZg7",
- "secret": "EsKQSyuuuuiA3daw_RCeIkE5GMbj1XD-vXXQpq4bppA"},
- "bitmex": {"key": "sGHr0ll5Nma3kfpLc9Y6ulFZ",
- "secret": "s7AZmA4mHBaH4leAsQjRUCdy_Z-VnHRWIF1B75rm6oRMeQOs"},
- "bybit": {"key": "tGLSF3rwSDkk8ScWym", "secret": "fm4zTEhKBrcTetQWK0v5fNzxazsTy9d6ANKn"}
+{"deribit":{"key": "iK8orQnY",
+ "secret": "VautqVCoZzqPk065IOG_KzBx07bdS90_gvV2FJyuFSA"},
+ "bitmex": {"key": "gynJlPN5HUyU-ocBFNpsprde",
+ "secret": "2mGqlp1oy0ZYzzaJUqO4h1M5kxFiYGkZKslpNMLu4gWDEcYX"},
+ "bybit": {"key": "yW9JmhKpcdG4raH9HL", "secret": "6RfdHkkg3Fv8LpVjm5nNKWjUvO6jSh7lbTRr"}
  }

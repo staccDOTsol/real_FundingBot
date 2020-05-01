@@ -3,8 +3,8 @@
 #nohup node api-connectors/official-ws/delta-server/index.js &
 #sudo killall mongod
 #sudo nohup mongod --dbpath=/var/lib/mongodb &
-sudo killall python3
-sudo killall python3.7
+#sudo killall python3
+#sudo killall python3.7
 while :
 do
 OUTPUT=$(ps -aux | grep -cE "python3.7 market_maker")

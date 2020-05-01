@@ -1,6 +1,5 @@
 # This code is for sample purposes only, comes as is and with no warranty or guarantee of performance
-from bitmex_websocket import BitMEXWebsocket
-import linecache
+
 import sys
 import threading
 import time
@@ -66,14 +65,14 @@ parser.add_argument( '--no-restart',
 
 args    = parser.parse_args()
 
-ftxKEY     = os.environ["ftxkey"]#"NqOlVRaqGM-XCX0cpf67UYxvT2tcB56SHlS-tlB-"#"VC4d7Pj1"
-ftxSECRET  = os.environ["ftxsecret"]#gnBQZHa8-cT1E-p0YyNqHkx9Y_8bdk"#"IB4VEP26OzTNUt4JhNILOW9aDuzctbGs_K6izxQG2dI"
+ftxkey     = os.environ["ftxkey"]#"NqOlVRaqGM-XCX0cpf67UYxvT2tcB56SHlS-tlB-"#"VC4d7Pj1"
+ftxsecret  = os.environ["ftxsecret"]#gnBQZHa8-cT1E-p0YyNqHkx9Y_8bdk"#"IB4VEP26OzTNUt4JhNILOW9aDuzctbGs_K6izxQG2dI"
 
-binKEY     = os.environ["binkey"]#"VC4d7Pj1"
-binSECRET  = os.environ['binsecret']#"#"IB4VEP26OzTNUt4JhNILOW9aDuzctbGs_K6izxQG2dI"
+binkey     = os.environ["binkey"]#"VC4d7Pj1"
+binsecret  = os.environ['binsecret']#"#"IB4VEP26OzTNUt4JhNILOW9aDuzctbGs_K6izxQG2dI"
 URL     = 'https://www.deribit.com'
 binance_websocket_api_manager = BinanceWebSocketApiManager(exchange="binance.com-futures")
-binance_websocket_api_manager.set_private_api_config(binKEY, binSECRET)
+binance_websocket_api_manager.set_private_api_config(binkey, binsecret)
 userdata_stream_id = binance_websocket_api_manager.create_stream(["!userData"], ["arr"])
 EWMA_WGT_LOOPTIME   = 2.5    
 BP                  = 1e-4      # one basis point
@@ -113,6 +112,7 @@ class MarketMaker( object ):
 
         self.rates['binance'] = {}
         self.rates['ftx'] = {}
+        self.rates['gatio'] = {}
 
         self.maxqty = 1
         self.PCT_LIM_LONG = {}
@@ -227,6 +227,7 @@ class MarketMaker( object ):
                 if doneFtx[rate['future'].replace('-PERP', '')] == False:
                     doneFtx[rate['future'].replace('-PERP', '')] = True
                     self.rates['ftx'][rate['future'].replace('-PERP', '')] = rate['rate'] * 24
+
         coins = {}
         coins['ftx'] = {}
         coins['binance'] = {}    
@@ -470,13 +471,13 @@ class MarketMaker( object ):
     def create_client( self ):
         self.ftx     = ccxt.ftx({
             'enableRateLimit': True,
-            'apiKey': ftxKEY,   
-            'secret': ftxSECRET,
+            'apiKey': ftxkey,   
+            'secret': ftxsecret,
         })
         self.binance     = ccxt.binance({
             'enableRateLimit': True,
-            'apiKey': binKEY,
-            'secret': binSECRET,
+            'apiKey': binkey,
+            'secret': binsecret,
             "options":{"defaultMarket":"futures"},
             'urls': {'api': {
                                      'public': 'https://fapi.binance.com/fapi/v1',
@@ -1451,17 +1452,53 @@ class MarketMaker( object ):
                     if pos['size'] != 0:
             
                         self.positions[ pos[ 'symbol' ] + '-binance'] = pos       
-            ex='ftx'
-            try:
-                positions       = self.ftx.privateGetPositions()['result']
-                ###print(self.futures)
-                for pos in positions:
-                    ###print('ftx pos')
-                    
-                    pos['future'] = pos['future'].replace('-PERP', '')
-                    pos['floatingPl'] = pos['unrealizedPnl']
-                    if pos['entryPrice'] is not None:
-                        pos['size'] = float(pos['netSize']) * (pos['entryPrice'])
+        ex='ftx'
+        try:
+            positions       = self.ftx.privateGetPositions()['result']
+            ###print(self.futures)
+            for pos in positions:
+                ###print('ftx pos')
+                
+                pos['future'] = pos['future'].replace('-PERP', '')
+                pos['floatingPl'] = pos['unrealizedPnl']
+                if pos['entryPrice'] is not None:
+                    pos['size'] = float(pos['netSize']) * (pos['entryPrice'])
+
+        ex='binance'
+        if ex == 'binance':
+            positions       = self.binance.fapiPrivateGetPositionRisk()
+            ###print('lala')
+            ###print(positions)
+            ###print(self.futures)
+            for pos in positions:
+                ###print('binance pos')
+                ###print(pos)
+                pos['symbol'] = pos['symbol'].replace('USDT', '').replace('USD', '')
+                pos['size'] = float(pos['positionAmt']) * self.get_spot(pos['symbol'])
+                #if pos['size'] == 0:   
+                #    pos['size'] = 1
+                pos['floatingPl'] = float(pos['unRealizedProfit']) 
+                if pos['size'] != 0:
+        
+                    self.positions[ pos[ 'symbol' ] + '-binance'] = pos       
+        ex='ftx'
+        try:
+            positions       = self.ftx.privateGetPositions()['result']
+            ###print(self.futures)
+            for pos in positions:
+                ###print('ftx pos')
+                
+                pos['future'] = pos['future'].replace('-PERP', '')
+                pos['floatingPl'] = pos['unrealizedPnl']
+                if pos['entryPrice'] is not None:
+                    pos['size'] = float(pos['netSize']) * (pos['entryPrice'])
+                else:
+                    pos['size'] = 0
+                #if pos['size'] == 0:
+                #    pos['size'] = 2
+                if pos['size'] != 0:
+                    if '-' in pos[ 'future' ]:
+                        self.positions[ pos[ 'future' ]] = pos
                     else:
                         pos['size'] = 0
                     #if pos['size'] == 0:
