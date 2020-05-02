@@ -460,7 +460,10 @@ class MarketMaker( object ):
                         order['qty'] = order['orderQty']
                         order['status'] = order['ordStatus']
                         if order['ordStatus'].lower() == 'canceled':
-                            cancelledMex.append(order['orderID'])
+                            try:
+                                self.cancelledMex.append(order['orderID'])
+                            except:
+                                abc=123
                         if order['ordStatus'].lower() == 'new':
                             #print('bitmex order!')
                             #print('mex order')
@@ -573,7 +576,7 @@ class MarketMaker( object ):
                         if ex == 'bitmex':
                             try:
                                 for order in self.bid_ords[self.futtoks[token][ex]]:
-                                    if order['orderID'] not in cancelledMex:
+                                    if order['orderID'] not in self.cancelledMex:
                                         if (self.len_bid_ords[order['symbol']]) > self.MAX_LAYERS + 1 and order['side'].lower() == 'buy' :
                                             #brem = True
                                             #print('cancel 3')
@@ -582,7 +585,7 @@ class MarketMaker( object ):
                                     else:
                                         self.bid_ords[self.futtoks[token][ex]].remove(order)
                                 for order in self.ask_ords[self.futtoks[token][ex]]:
-                                    if order['orderID'] not in cancelledMex:
+                                    if order['orderID'] not in self.cancelledMex:
                                         if (self.len_ask_ords[order['symbol']]) > self.MAX_LAYERS + 1  and order['side'].lower() == 'sell' :
                                             #arem = True
                                             #print('cancel 4')
@@ -596,7 +599,7 @@ class MarketMaker( object ):
                                 count = 0
                                 for order in self.bid_ords[self.futtoks[token][ex]]:
                                     if count > self.MAX_LAYERS  + 1 and order['side'].lower() == 'buy':
-                                        if order['orderID'] not in cancelledMex:
+                                        if order['orderID'] not in self.cancelledMex:
                                             self.mex.Order.Order_cancel(orderID=order['orderID']).result()
                                         else:
                                             self.ask_ords[self.futtoks[token][ex]].remove(order)
@@ -605,7 +608,7 @@ class MarketMaker( object ):
                                 for order in self.ask_ords[self.futtoks[token][ex]]:
                                 
                                     if count > self.MAX_LAYERS + 1 and order['side'].lower() == 'sell':
-                                        if order['orderID'] not in cancelledMex:
+                                        if order['orderID'] not in self.cancelledMex:
                                             self.mex.Order.Order_cancel(orderID=order['orderID']).result()
                                         else:
                                             self.ask_ords[self.futtoks[token][ex]].remove(order)
