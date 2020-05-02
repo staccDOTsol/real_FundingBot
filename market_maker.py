@@ -533,9 +533,7 @@ class MarketMaker( object ):
                                 self.bid_ords[self.futtoks[token][ex]] = bid_ords['bids']
                             if 'asks' in ask_ords:
                                 self.ask_ords[self.futtoks[token][ex]] = ask_ords["asks"]
-                            pos = dbpositions.find_one({"name": self.futtoks[token][ex]})
-                            if pos is not None:
-                                self.positions[self.futtoks[token][ex]] = pos
+                            
                         except:
                            PrintException()#abc=123#PrintException()
                         self.asksleft[self.futtoks[token][ex]] = max(self.len_ask_ords[self.futtoks[token][ex]], self.asksleftbefore[self.futtoks[token][ex]])
@@ -580,7 +578,7 @@ class MarketMaker( object ):
                                         if (self.len_bid_ords[order['symbol']]) > self.MAX_LAYERS + 1 and order['side'].lower() == 'buy' :
                                             #brem = True
                                             #print('cancel 3')
-
+                                            self.cancelledMex.append(order['orderID'])
                                             self.mex.Order.Order_cancel(orderID=order['orderID']).result()
                                     else:
                                         self.bid_ords[self.futtoks[token][ex]].remove(order)
@@ -589,7 +587,8 @@ class MarketMaker( object ):
                                         if (self.len_ask_ords[order['symbol']]) > self.MAX_LAYERS + 1  and order['side'].lower() == 'sell' :
                                             #arem = True
                                             #print('cancel 4')
-
+                                            
+                                            self.cancelledMex.append(order['orderID'])
                                             self.mex.Order.Order_cancel(orderID=order['orderID']).result()
                                     else:
                                         self.ask_ords[self.futtoks[token][ex]].remove(order)
@@ -600,15 +599,18 @@ class MarketMaker( object ):
                                 for order in self.bid_ords[self.futtoks[token][ex]]:
                                     if count > self.MAX_LAYERS  + 1 and order['side'].lower() == 'buy':
                                         if order['orderID'] not in self.cancelledMex:
+                                        
+                                            self.cancelledMex.append(order['orderID'])
                                             self.mex.Order.Order_cancel(orderID=order['orderID']).result()
                                         else:
-                                            self.ask_ords[self.futtoks[token][ex]].remove(order)
+                                            self.bid_ords[self.futtoks[token][ex]].remove(order)
                                     count = count + 1
                                 count = 0
                                 for order in self.ask_ords[self.futtoks[token][ex]]:
                                 
                                     if count > self.MAX_LAYERS + 1 and order['side'].lower() == 'sell':
                                         if order['orderID'] not in self.cancelledMex:
+                                            self.cancelledMex.append(order['orderID'])
                                             self.mex.Order.Order_cancel(orderID=order['orderID']).result()
                                         else:
                                             self.ask_ords[self.futtoks[token][ex]].remove(order)
@@ -2561,26 +2563,7 @@ class MarketMaker( object ):
 
        #print(3)
         
-        try:
-
-            loop = asyncio.get_event_loop()
-           #print('launch lopo in thread..')
-            t = threading.Thread(target=self.der_pos)
-            t.start()
-            t = threading.Thread(target=self.der_ords)
-            t.start()
-            t = threading.Thread(target=self.mex_pos)
-            t.start()
-            t = threading.Thread(target=self.mex_ords)
-            t.start()
-            t = threading.Thread(target=self.bit_pos)
-            t.start()
-            t = threading.Thread(target=self.bit_ords)
-            t.start()
-            t = threading.Thread(target=self.loop_in_thread, args=(loop,))
-            t.start()
-        except Exception as e:
-            PrintException()#abc=123#PrintException()
+        
 
 
         #self.update_positions()
@@ -2626,6 +2609,26 @@ class MarketMaker( object ):
                             self.positions[ pos[ 'instrument' ]] = pos
 
         asksbids = self.get_asks_bids('bitmex', 'BTC')
+        try:
+
+            loop = asyncio.get_event_loop()
+           #print('launch lopo in thread..')
+            t = threading.Thread(target=self.der_pos)
+            t.start()
+            t = threading.Thread(target=self.der_ords)
+            t.start()
+            t = threading.Thread(target=self.mex_pos)
+            t.start()
+            t = threading.Thread(target=self.mex_ords)
+            t.start()
+            t = threading.Thread(target=self.bit_pos)
+            t.start()
+            t = threading.Thread(target=self.bit_ords)
+            t.start()
+            t = threading.Thread(target=self.loop_in_thread, args=(loop,))
+            t.start()
+        except Exception as e:
+            PrintException()#abc=123#PrintException()
         self.output_status()
         
     def update_status( self ):
