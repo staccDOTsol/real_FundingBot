@@ -2175,13 +2175,17 @@ class MarketMaker( object ):
                         print(e)
                 else:
                     try:
-                        if self.arbmult[fut]['arb'] > 1 and (self.positions[fut]['size'] - qty <= max_bad_arb / 3 * -1):
-                            buyOrds.append({"symbol":fut, "orderQty":round(qty), "price":prc,"execInst":"ParticipateDoNotInitiate"})#self.client.buy( fut, qty, prc, 'true' )
+                        if qty + self.skew_size <  self.MAX_SKEW:
+                            if self.arbmult[fut]['arb'] > 1 and (self.positions[fut]['size'] - qty <= max_bad_arb ):
+                                buyOrds.append({"symbol":fut, "orderQty":round(qty), "price":prc,"execInst":"ParticipateDoNotInitiate"})
+                                
+
+                            if self.arbmult[fut]['arb'] < 1 :
+                                buyOrds.append({"symbol":fut, "orderQty":round(qty), "price":prc,"execInst":"ParticipateDoNotInitiate"})
+
+
                             
-
-                        if self.arbmult[fut]['arb'] < 1 :
-                            buyOrds.append({"symbol":fut, "orderQty":round(qty), "price":prc,"execInst":"ParticipateDoNotInitiate"})#self.client.buy(  fut, qty, prc, 'true' )
-
+                        
                     except (SystemExit, KeyboardInterrupt):
                         raise
                     except Exception as e:
@@ -2251,14 +2255,16 @@ class MarketMaker( object ):
                         print(e)
                 else:
                     try:
-                        if self.arbmult[fut]['arb'] >= 1 :
-                            sellOrds.append({"symbol":fut, "orderQty":-1 * round(qty), "price":prc,"execInst":"ParticipateDoNotInitiate"})#self.client.sell( fut, qty, prc, 'true' )
+                        if qty * -1 + self.skew_size  > -1 * self.MAX_SKEW * 2:
+                            if self.arbmult[fut]['arb'] >= 1 :
+                                sellOrds.append({"symbol":fut, "orderQty":-1 * round(qty), "price":prc,"execInst":"ParticipateDoNotInitiate"})#self.client.sell( fut, qty, prc, 'true' )
 
+                                
                             
-                        
-                        if self.arbmult[fut]['arb'] <= 1 and self.positions[fut]['size'] + qty >= max_bad_arb / 3:
-                            sellOrds.append({"symbol":fut, "orderQty":-1 * round(qty), "price":prc,"execInst":"ParticipateDoNotInitiate"})#self.client.sell(  fut, qty, prc, 'true' )
+                            if self.arbmult[fut]['arb'] <= 1 and self.positions[fut]['size'] + qty * -1 >=-1 * max_bad_arb  :
+                                sellOrds.append({"symbol":fut, "orderQty":-1 * round(qty), "price":prc,"execInst":"ParticipateDoNotInitiate"})#self.client.sell(  fut, qty, prc, 'true' )
 
+                        
 
                             
                     except (SystemExit, KeyboardInterrupt):
@@ -2365,7 +2371,18 @@ class MarketMaker( object ):
                         self.arbmult[winner]=({"arb": 0.5, "long": winner, "short": "others"})
                     else:
                         self.arbmult[k]=({"arb": 1.5, "long": winner, "short": "others"})
+            t = 0
+            c = 0
+            for mult in self.arbmult:
+                t = t + self.arbmult[mult]['arb']
+                c = c + 1
+            avg = t / c 
+            if avg > 0:#sell, so buy
+                self.arbmult['XBTUSD']['arb'] = 0.99
+            else:
 
+
+                self.arbmult['XBTUSD']['arb'] = 1.01
             skewingpos = 0
             skewingneg = 0
             positionSize = 0
