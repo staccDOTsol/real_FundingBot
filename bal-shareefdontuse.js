@@ -123,8 +123,8 @@ ws.on('message', async function incoming(data) {
 		}
     }
     btc = btce + ethe
-    console.log('btc123 ' + (btc).toString())
-    console.log('btc123 ' + (btcusd).toString())
+    console.log('btc123 ' + (btc2).toString())
+    console.log('btc123 ' + (usd2).toString())
     console.log('btc123 ' + (gogo).toString())
     
     //console.log(btc)
@@ -237,17 +237,27 @@ bals['bitmex'] = {}
 bals['bybit'] = {}
 bals['deribit'] = {}
 setInitial()
+thecount = 0
 setInterval(async function() {
+	setInitial()
 	    	newbtc2 = 0
+	    	thecount = 0
+bals['bitmex'] = {}
+bals['bybit'] = {}
+bals['deribit'] = {}
 	 request.get("http://localhost:4444/margin", async function(e,r,d){
 mex = parseFloat(JSON.parse(d)[0]['amount'])/ 100000000	 
 	 bals['bitmex']['BTC']  = mex
 newbtc2 += mex
+thecount++
+
 client2.getWalletBalance({'coin': 'BTC'})
   .then(result => {
+  	console.log(result)
     bitbtc = (result.result.BTC.equity);
     bals['bybit']['BTC'] = bitbtc
     newbtc2 += bitbtc
+thecount++
   })
   .catch(err => {
     console.error(err);
@@ -258,6 +268,7 @@ client2.getWalletBalance({'coin': 'BTC'})
            
     bals['bybit']['ETH'] = biteth / ethbtc
     newbtc2 += (biteth / ethbtc)
+thecount++
   })
   .catch(err => {
     console.error(err);
@@ -265,34 +276,49 @@ client2.getWalletBalance({'coin': 'BTC'})
 
   client.fetchBalance({'coin': 'BTC'})
   .then(result => {
-    bitbtc = (result.result.BTC.equity);
+    bitbtc = (result.BTC.total);
+    console.log(result.BTC.total)
     bals['deribit']['BTC'] = bitbtc
     newbtc2 += bitbtc
+thecount++
   })
   .catch(err => {
     console.error(err);
   });
   client.fetchBalance({'coin': 'ETH'})
   .then(result => {
-    biteth= parseFloat(result.result.ETH.equity);
+  	console.log(result.BTC.total)
+    biteth= parseFloat(result.BTC.total);
            
     bals['deribit']['ETH'] = biteth / ethbtc
     newbtc2 += (biteth / ethbtc)
+thecount++
+setTimeout(function(){
+	console.log(Object.keys(bals['deribit']).length)
+	gogo = false
+   	if (Object.keys(bals['bitmex']).length == 1 && Object.keys(bals['bybit']).length == 2 && Object.keys(bals['deribit']).length ==2){
+    	btc2 = newbtc2
+    	gogo = true
+    	console.log(thecount)
+    	if(first == true){
+    		first = false;
 
+    	if (btcstart == undefined || usdstart == undefined){
+    		btcstart = btc2
+    		usdstart = btc2 * btcusd
+    	}
+
+    	}
+    }
+	console.log(bals)
+	console.log(bals)
+	console.log(bals)
+    }, 400)
   })
   .catch(err => {
     console.error(err);
   });
-   setTimeout(function(){
-    	btc2 = newbtc2
-    	if (btcstart == undefined || usdstart == undefined){
-    		btcstart = new Date().getTime()
-    		usdstart = new Date().getTime()
-    	}
-    }, 400)
-	console.log(bals)
-	console.log(bals)
-	console.log(bals)
+   
 	if (gogo == true){
         btc4 = btc
         btcusdlast = btcusd

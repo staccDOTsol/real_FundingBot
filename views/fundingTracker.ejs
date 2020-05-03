@@ -5699,11 +5699,11 @@ Imaging with any questions regarding Web fonts:  http://webfonts.fonts.com
         value: <%=parseFloat(lines[result][2])%>
 } )
   <%}%>
-    <%for (var result in btcBals){%>
-  asks.push([<%=btcBals[result]%>])   
+    <%for (var result in btc){%>
+  asks.push([<%=btc[result]%>])   
   <%}%> 
-  <%for (var result in usdBals){%>
-  usd.push([<%=usdBals[result]%>])   
+  <%for (var result in usd){%>
+  usd.push([<%=usd[result]%>])   
   <%}%>
 
   <%for (var result in btcusd){%>
@@ -5730,20 +5730,27 @@ for (var line in lines){
     chart.addAxis({ // Secondary yAxis
         id: 'btc-axis',
         title: {
-            text: 'BTC Balance'
+            text: '% Delta'
         },
         lineWidth: 2,
-        lineColor: 'black',
+        lineColor: '#00FF00',
         opposite: true
     });
     chart.addSeries({
-        name: 'BTC Balance',
+        name: 'BTC Combined Delta',
         type: 'line',
-        color: 'black',
+        color: '#00FF00',
         yAxis: 'btc-axis',
         data: asks
     });
-          
+           
+    chart.addSeries({
+        name: 'USD Combined Delta',
+        type: 'line',
+        color: 'black',
+        yAxis: 'btc-axis',
+        data: usd
+    });
           
     chart.addAxis({ // Secondary yAxis
         id: 'btcusd-axis',
@@ -5759,23 +5766,6 @@ for (var line in lines){
         type: 'line',
         color: '#08F',
         yAxis: 'btcusd-axis',
-        data: btcusd
-    });
-
-    chart.addAxis({ // Secondary yAxis
-        id: 'usdusd-axis',
-        title: {
-            text: 'USD Balance'
-        },
-        lineWidth: 2,
-        lineColor: 'green',
-        opposite: true
-    });
-    chart.addSeries({
-        name: '$USD Balance',
-        type: 'line',
-        color: 'green',
-        yAxis: 'usdusd-axis',
         data: btcusd
     });
         console.log("ready!");
@@ -5843,9 +5833,9 @@ $('#apr').html(apr.toPrecision(4) + ' % projected annual yield<br>' + (apr/365).
 
 
 
-                asks.push( jsondata.btcbal); 
+                asks.push( jsondata.btc); 
                 console.log(jsondata.usd)
-                usd.push( jsondata.usdbal); 
+                usd.push( jsondata.usd); 
                 btcusd.push( jsondata.btcusd); 
                 equity.push([jsondata.time, jsondata.btcNow]);
                 avail.push([jsondata.time, jsondata.avail]);
