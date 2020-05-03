@@ -938,14 +938,30 @@ class MarketMaker( object ):
             ask_mkt = bbo[ 'ask' ]
             mid = 0.5 * ( bbo[ 'bid' ] + bbo[ 'ask' ] )
             bbos = []
-            #self.client.buy(  'BTC-PERPETUAL', size, mid * 1.02, 'false' )
+            arbs = {}
+            #self.client.buy(  'BTC-PERPETUAL', size, mid * 1.02)
+            expdays = {}
             for k in self.futures.keys():
                 m = self.get_bbo(k)
                 bid = m['bid']
                 ask=m['ask']
                 mid1 = 0.5 * (bid + ask)
+                arb = mid1 / mid
+                arbs[k] = float(arb)
+                print('perp is ' + str(mid) + ' ' + k + ' is ' + str(mid1) + ' and arb is ' + str(arb)  + ' positive is sell negative is bbuy')
+                print('exp perp is always 3000 yrs')
+                print(self.futures[k]['expi_dt'])
+                print('in seconds')
+                expsecs = (self.futures[k]['expi_dt'] - datetime.now()).total_seconds()
+                print(expsecs)
+                print('in days')
+                print(expsecs / 60 / 24)
+                expday = expsecs / 60 / 24
+                expdays[k]=float(expday)
                 bbos.append({k: mid1 - self.get_spot()})
-
+            for k in arbs:
+                doin = (-1*(1-arbs[k]) / expdays[k])* 100
+                print(k + ' has a daily arb opportunity of ' + str(doin)  + '%')
             ##print(bbos)
             h = 0
             winner = ""
@@ -962,17 +978,25 @@ class MarketMaker( object ):
                         positive = False
 
             if positive == True:
+                losers = []
+                for k in self.futures.keys():
+                    if k != winner:
+                        losers.append(k)
                 for k in self.futures.keys():
                     if k == winner:
-                        self.arbmult[winner]=({"arb": 1.5, "long": "others", "short": winner})
+                        self.arbmult[winner]=({"arb": arbs[k], "long": losers, "short": winner})
                     else:
-                        self.arbmult[k]=({"arb": 0.5, "long": "others", "short": winner})
+                        self.arbmult[k]=({"arb": arbs[k], "long": losers, "short": winner})
             else:
+                losers = []
+                for k in self.futures.keys():
+                    if k!= winner:
+                        losers.append(k)
                 for k in self.futures.keys():
                     if k == winner:
-                        self.arbmult[winner]=({"arb": 0.5, "long": winner, "short": "others"})
+                        self.arbmult[winner]=({"arb": arbs[k], "long": winner, "short": losers})
                     else:
-                        self.arbmult[k]=({"arb": 1.5, "long": winner, "short": "others"})
+                        self.arbmult[k]=({"arb": arbs[k], "long": winner, "short": losers})
             t = 0
             c = 0
             for mult in self.arbmult:
