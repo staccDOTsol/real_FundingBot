@@ -11,6 +11,7 @@ import requests
 import json
 import copy as cp
 
+import random, string
 import argparse, logging, math, os, pathlib, sys, time, traceback
 testing = False
 import bitmex
@@ -52,8 +53,9 @@ parser.add_argument( '--no-restart',
 
 args    = parser.parse_args()
 #if 'KEY' in os.environ:
-KEY     = "mxXLY7m4xJQQx-W-5BNz2eNK" ##os.environ['KEY']
-SECRET  = "F_eKzKmFMbASi1w9KQMaa0x6rCQB_0GW_3H9t_7wDIt5gi8u" #os.environ['SECRET']
+KEY     = "yv6QM80H9mAfWKU3w2G3yWi9" ##os.environ['KEY']
+SECRET  = "gETmwjECccIYwTkly-AJGV__CKtldJ_9YYpQNaZasO6TMnsJ" #os.environ['SECRET']
+LEVERAGE_MAX = 40
 #else:
 #    KEY     = ""#"Ef30Pt3-"#"VC4d7Pj1"#
 #    SECRET  = ""#"TdREcHubAr4cPh-WwifNI0Y1iGdq3YjedsO-8ct-Fhw"#"IB4VEP26OzTNUt4JhNILOW9aDuzctbGs_K6izxQG2dI"#
@@ -123,9 +125,7 @@ class MarketMaker( object ):
 
         self.testing = testing
         self.returnOrders = []
-        self.predict_1 = 0.5
         self.theeps = None
-        self.predict_5 = 0.5
         self.PCT_LIM_LONG        = 20       # % position limit long
 
         self.PCT_LIM_SHORT       = 20       # % position limit short
@@ -137,8 +137,12 @@ class MarketMaker( object ):
         self.equity_btc_init    = None
         self.con_size           = float( CONTRACT_SIZE )
         self.client             = None
-        self.mex = bitmex.bitmex(test=True, api_key=KEY, api_secret=SECRET)
-
+        self.mex = bitmex.bitmex(test=False, api_key=KEY, api_secret=SECRET)
+        self.place_asks = {}
+        self.place_bids = {}
+        self.LEV_LIM = {}
+        self.mexfundingfirst = True
+        self.exchangeRates = {}
         self.skew_size = 0
         self.maxMaxDD = 20
         self.minMaxDD = -8
@@ -173,7 +177,7 @@ class MarketMaker( object ):
     "secret": SECRET})    
         #### TESTNET TO WWW
         #print(dir(self.client))  
-        self.client.urls['api'] = self.client.urls['test']
+        #self.client.urls['api'] = self.client.urls['test']
     def getbidsandasks(self, fut, mid_mkt):
         nbids = MAX_LAYERS + 1
         nasks = MAX_LAYERS + 1
@@ -184,7 +188,7 @@ class MarketMaker( object ):
         tsz = self.get_ticksize( fut )            
         # Perform pricing
         vol = max( self.vols[ BTC_SYMBOL ], self.vols[ fut ] )
-        eps = BP * vol * (RISK_CHARGE_VOL * (((self.predict_1 + self.predict_5) / 2) + 1))
+        eps = BP * vol * (RISK_CHARGE_VOL)
 
         riskfac     = math.exp( eps )
                 
@@ -236,12 +240,18 @@ class MarketMaker( object ):
             # Get orderbook
             if 'contract' == 'BTC/USD':
                 contract = 'XBTUSD'
+            if 'contract' == 'ETH/USD':
+                contract = 'XBTUSD'
+            if 'contract' == 'XRP/USD':
+                contract = 'XRPUSD'
             print(contract)
-            t = requests.get('http://localhost:4448/instrument?symbol=' + contract).json()[0]
+            t = requests.get('http://localhost:4444/instrument?symbol=' + contract).json()[0]
             
             ask_mkt = t['askPrice']
             bid_mkt = t['bidPrice']
-
+            if '.B' in contract:
+                ask_mkt = t['markPrice']
+                bid_mkt = t['markPrice']
             nbids = MAX_LAYERS + 1
             nasks = MAX_LAYERS + 1
             
@@ -279,11 +289,14 @@ class MarketMaker( object ):
                     best_ask = a[ 'price' ]
                     break
                     """
-            tsz = self.get_ticksize( contract )            
+            tsz = t['tickSize']           
             # Perform pricing
-            vol = max( self.vols[ BTC_SYMBOL ], self.vols[ contract ] )
-            eps = BP * vol * (RISK_CHARGE_VOL * (((self.predict_1 + self.predict_5) / 2) + 1))
-
+            if '.B' not in contract:
+                vol = max( self.vols[ BTC_SYMBOL ], self.vols[ contract ] )
+                eps = BP * vol * (RISK_CHARGE_VOL)
+            else:
+                vol = self.vols[ BTC_SYMBOL ]
+                eps = BP * vol * (RISK_CHARGE_VOL)
             riskfac     = math.exp( eps )
                     
 
@@ -321,12 +334,18 @@ class MarketMaker( object ):
         insts               = self.client.fetchMarkets()
         #print(insts[0])
         self.futures        = sort_by_key( { 
-            i[ 'symbol' ]: i for i in insts if 'BTC/USD' in i['symbol'] or ('XBT' in i['symbol'] and '7D' not in i['symbol']) and '.' not in i['symbol']
+            i[ 'symbol' ]: i for i in insts if 'BTC/USD' in i['symbol'] or ('XBT' in i['symbol'] and '7D' not in i['symbol']) and '.' not in i['symbol']    or ('XRP' in i['symbol'] and 'BTC' not in i['symbol'] and '7D' not in i['symbol']) and '.' not in i['symbol'] and len(i['symbol']) <= 8 #or ('ETH' in i['symbol'] and 'BTC' not in i['symbol'] and '7D' not in i['symbol']) and '.' not in i['symbol'] and len(i['symbol']) <= 8  
         } )
         self.futures['XBTUSD'] = self.futures['BTC/USD']
         del self.futures['BTC/USD']
-        #self.futures['ETHUSD'] = self.futures['ETH/USD']
-        #del self.futures['ETH/USD']
+        if 'ETH/USD' in self.futures:
+            self.futures['ETHUSD'] = self.futures['ETH/USD']
+            del self.futures['ETH/USD']
+        if 'XRP/USD' in self.futures:
+            self.futures['XRPUSD'] = self.futures['XRP/USD']
+            del self.futures['XRP/USD']
+            
+        print(self.futures.keys())
         #print(self.futures['XBTH20'])
         for k in self.futures.keys():
             if self.futures[k]['info']['expiry'] == None:
@@ -362,6 +381,12 @@ class MarketMaker( object ):
     def get_ticksize( self, contract ):
         return self.futures[ contract ]['info'][ 'tickSize' ]
     
+    def get_multiplier( self, contract ):
+        contract2 = contract.replace('/','')
+        if 'XBT' in contract:
+            return ( 1 / self.get_bbo(contract2)['bid'])
+        return (self.get_bbo(contract2)['bid'] * self.futures[ contract ]['info']['multiplier']  / 100000000) /  self.get_bbo(".B" + contract[0:3] + "XBT")['bid']  
+    
     
     def output_status( self ):
         
@@ -390,7 +415,7 @@ class MarketMaker( object ):
         
         print_dict_of_dicts( {
             k: {
-                'Contracts': self.positions[ k ][ 'size' ]
+                '$USD': self.positions[ k ][ 'size' ]
             } for k in self.positions.keys()
             }, 
             title = 'Positions' )
@@ -425,7 +450,6 @@ class MarketMaker( object ):
 
         
     def place_orders( self ):
-
         if self.monitor:
             return None
         
@@ -469,69 +493,47 @@ class MarketMaker( object ):
             spot            = self.get_spot()
             bal_btc         = bal
             pos             = self.positions[ fut ][ 'sizeBtc' ]
-            for k in self.futures.keys():
-                if self.arbmult[k]['short'] == 'others' and fut == self.arbmult[k]['long']:
-                    self.PCT_LIM_LONG = self.PCT_LIM_LONG * 2
-                    ##print(fut + ' long double it')
-                if self.arbmult[k]['long'] == 'others' and fut == self.arbmult[k]['short']:
-                    self.PCT_LIM_SHORT = self.PCT_LIM_SHORT * 2 
-                    ##print(fut + ' short double it')   
+            
             nbids = MAX_LAYERS
             nasks = MAX_LAYERS
             
-            place_bids = True
-            place_asks = True
-            place_bids2 = True
-            place_asks2 = True
-            if self.IM > self.PCT_LIM_LONG:
-                place_asks = False
-                nbids = 0
-            if self.IM > self.PCT_LIM_SHORT:
-                place_bids = False
-                nasks = 0
-            if self.LEV > self.PCT_LIM_LONG / 2:
-                place_asks2 = False
-                nbids = 0
-            if self.LEV > self.PCT_LIM_SHORT / 2:
-                place_bids2 = False
-                nasks = 0
+            
+            nbids = 2
+            nasks = 2
+            
+            self.place_bids[fut[0:3]] = True
+            self.place_asks[fut[0:3]] = True
+            #print(self.PCT_LIM_LONG)
+            a = {}
+            for pos in self.positions:
+                a[pos[0:3]] = 0
+            
+            for pos in self.positions:
+                a[pos[0:3]] = a[pos[0:3]] + math.fabs(self.positions[pos]['size'])
+            for pos in self.positions:
+                if self.LEV_LIM[pos[0:3]] == 0:
+                    self.place_asks[pos[0:3]] = False
+                    self.place_bids[pos[0:3]] = False
+                    nasks = 0
+                    nbids = 0
+                elif (((a[pos[0:3]] / self.equity_usd) / self.LEV_LIM[pos[0:3]] * 1000 ) / 10  * len(self.futures.keys())) > 100:
+                    self.place_asks[pos[0:3]]= False
+                    self.place_bids[pos[0:3]] = False
+                    nasks = 0
+                    nbids = 0
+                
             qtybtc = ""
             #qtybtc = float(max( PCT_QTY_BASE  * bal_btc, (MIN_ORDER_SIZE * 10) / spot))
             ##print('qtybtc: ' + str(qtybtc))
 
-            ##print('fut: ' + fut)
-            nbids2 = MAX_LAYERS
-            nasks2 = MAX_LAYERS
             
-            place_bids2 = True
-            place_asks2 = True
-            if self.IM > self.PCT_LIM_LONG / 2:
-                place_bids2 = False
-                nbids2 = 0
-            if self.IM > self.PCT_LIM_SHORT / 2:
-                place_asks2 = False
-                nasks2 = 0
-            if self.LEV > self.PCT_LIM_LONG / 2 / 2:
-                place_bids2 = False
-                nbids2 = 0
-            if self.LEV > self.PCT_LIM_SHORT / 2 / 2:
-                place_asks2 = False
-                nasks2 = 0
+            
             ##print('place_x2')
             ##print(place_bids2)
             ##print(place_asks2)
             ##print(place_bids)
             ##print(place_asks)
 
-            overPosLimit = 'neither'
-            if not place_bids2:
-                overPosLimit = 'long'
-            if not place_asks2:
-                overPosLimit = 'short'
-            if not place_bids:
-                overPosLimit = 'superlong'
-            if not place_bids:
-                overPosLimit = 'supershort'
             positionGains = {}
             positionPrices = {}
             for ifut in self.futures.keys():
@@ -550,19 +552,20 @@ class MarketMaker( object ):
                 positionPrices[self.positions[p]['instrument']] = self.positions[p]['averagePrice']    
 
 
-            if not place_bids and not place_asks:
-                print( 'No bid no offer for ' + fut )
-                continue
+            if not self.place_bids[fut[0:3]] and not self.place_asks[fut[0:3]] and self.positions[fut]['size'] >= 0:
+                print( 'sell no bid no offer ' + fut )
+                self.place_asks[fut[0:3]] = True
+                nasks = 2
+            if not self.place_bids[fut[0:3]] and not self.place_asks[fut[0:3]] and self.positions[fut]['size'] <= 0:
+                print( 'buy no bid no offer ' + fut )
+                self.place_bids[fut[0:3]] = True
+                nbids = 2
                 
             tsz = self.get_ticksize( fut )            
             # Perform pricing
             vol = max( self.vols[ BTC_SYMBOL ], self.vols[ fut ] )
-            if 'PERPETUAL' in fut:
-                abc = 1
-                ###print('Skew delta: ' + str(self.skew_size))
-                ###print('RISK_CHARGE_VOL before AI: ' + str(RISK_CHARGE_VOL))
-                ###print('RISK_CHARGE_VOL after AI: ' + str(RISK_CHARGE_VOL * ((self.predict_1 * self.predict_5) + 1)))
-            eps         = BP * vol * (RISK_CHARGE_VOL * ((self.predict_1 * self.predict_5) + 1))
+            
+            eps         = BP * vol * (RISK_CHARGE_VOL)
             riskfac     = math.exp( eps )
 
             bbo     = self.get_bbo( fut )
@@ -579,17 +582,17 @@ class MarketMaker( object ):
             ex = 'bitmex'
             #self.orderStates[ex] = []
             ords = []
-            orders = requests.get("http://localhost:4448/order?symbol="+fut).json()
-        
+            bid_ords = []
+            ask_ords = []
+            future321 = fut.replace('/','').replace('BTC','XBT')
             
-            token = None
-            for order in orders:    
+            orders = requests.get("http://localhost:4444/order?symbol=" + future321).json()
+        
+                
+            for order in orders:   
+
                 order['direction'] = order['side']   
                 #print(order)
-                token = 'BTC'
-                if 'ETH' in order['symbol']:
-                    token = 'ETH'
-                
                 order['qty'] = order['orderQty']
                 order['status'] = order['ordStatus']
                 if order['ordStatus'].lower() == 'new':
@@ -600,40 +603,14 @@ class MarketMaker( object ):
                        
                 
                     if order[ 'side' ].lower() == 'buy':
-                        ords.append(order)
+                        bid_ords.append(order)
                         print(order)
                     elif order[ 'side' ].lower() == 'sell':
-                        ords.append(order)
+                        ask_ords.append(order)
                         print(order)
+         
             cancel_oids = []
-            bid_ords    = ask_ords = []
-            if True :
             
-                bid_ords        = [ o for o in ords if o[ 'direction' ].lower() == 'buy'  ]
-                len_bid_ords    = len( bid_ords )
-                bid0            = bbo['bid'] * math.exp( -MKT_IMPACT )
-                
-                bids    = bbo['bids']
-
-                bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
-            else:
-                bids = []
-                len_bid_ords = 0
-                bid_ords = []
-            if True :
-                
-                ask_ords        = [ o for o in ords if o[ 'direction' ].lower() == 'sell' ]    
-                len_ask_ords    = len( ask_ords )
-                ask0            = bbo['ask'] * math.exp(  MKT_IMPACT )
-                
-                asks    = bbo['asks']
-                
-                asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
-            else:
-                asks = []
-                len_ask_ords = 0
-                ask_ords = []
-            ##print(fut)
             ##print(fut)
             ##print(fut)
             ##print(fut)
@@ -646,31 +623,10 @@ class MarketMaker( object ):
             ##print(overPosLimit)
             ##print(place_asks)
             ##print(positionGains[fut])
-            skewDirection = 'neither'
-            if self.skew_size  < -1 * self.MAX_SKEW:
-                skewDirection = 'short'
-            if self.skew_size < -1 * self.MAX_SKEW:
-                skewDirection = 'supershort'    
-            if self.skew_size  >  self.MAX_SKEW:
-                skewDirection = 'long'
-            if self.skew_size  > self.MAX_SKEW:
-                skewDirection = 'superlong'
-            print('fut: ' + fut)
-            print('positionSkew: ' + positionSkew)
-            print('overPosLimit: ' + overPosLimit)
-            print('skewDirection: ' + skewDirection)
-            print('positionGains[fut]: ' + str(positionGains[fut]))
-            print('bbo for avgprice')
             bbo     = self.getbidsandasks( fut, positionPrices[fut] )
             bid_mkt = bbo[ 'bid' ]
             ask_mkt = bbo[ 'ask' ]
-            print(bbo)
-            print('bbo')
             bbo     = self.get_bbo( fut )
-            print(bbo)
-            print('positionPrices fut')
-            print(positionPrices[fut])
-            print('default action...')
 
             ##print(positionPrices[fut])
             ##print(bid_mkt)
@@ -685,9 +641,11 @@ class MarketMaker( object ):
             mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
             if True :
             
-                #bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
-                #len_bid_ords    = min( len( bid_ords ), nbids )
                 
+                len_bid_ords    = len( bid_ords )
+                print('len_bid_ords ' + str(len_bid_ords))
+                if len_bid_ords > 0:
+                    sleep(7000)
                 bid0            = mid_mkt * math.exp( -MKT_IMPACT )
                 bids    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
              
@@ -699,8 +657,11 @@ class MarketMaker( object ):
                 bid_ords = []
             if True :
                 
-                #ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
-                #len_ask_ords    = min( len( ask_ords ), nasks )
+                   
+                len_ask_ords    = len( ask_ords )
+                print('len_ask_ords ' + str(len_ask_ords))
+                if len_ask_ords > 0:
+                    sleep(7000)
                 
                 ask0            = bbo['ask'] * math.exp(  MKT_IMPACT )
                 
@@ -715,7 +676,6 @@ class MarketMaker( object ):
             intermediary = {}
             intermediary['vols'] = self.vols
             intermediary['eps'] = self.theeps
-            intermediary['predicts'] = {'one': self.predict_1, 'five': self.predict_5}
             with open('intermediaryvalues.json', 'w') as outfile:
                 json.dump(intermediary, outfile)
 
@@ -726,18 +686,18 @@ class MarketMaker( object ):
             #print(place_bids2)
             #print(nbids)
             #print(nbids2)
-           
-            self.execute_bids (fut, psize, nbids, nasks, place_bids, place_asks, bids, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords, askMult, bidMult)    
+            if self.place_bids[fut[0:3]] == True:
+                self.execute_bids (fut, psize, nbids, nasks, bids, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords, askMult, bidMult)    
             
-
-            self.execute_offers (fut, psize, nbids, nasks, place_bids, place_asks, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords, askMult, bidMult)    
+            if self.place_asks[fut[0:3]] == True:
+                self.execute_offers (fut, psize, nbids, nasks, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords, askMult, bidMult)    
                                   
-    def execute_bids ( self, fut, psize, nbids, nasks, place_bids, place_asks, bids, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords, askMult, bidMult):
+    def execute_bids ( self, fut, psize, nbids, nasks, bids, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords, askMult, bidMult):
         editOrds = []
         buyOrds = []
         #print('# BIDS')
         for i in range( 0, MAX_LAYERS ):
-            if place_bids and i < nbids:
+            if i < nbids:
                 print(i)
                 if i > 0:
                     prc = ticksize_floor( min( bids[ i ], bids[ i - 1 ] - tsz ), tsz )
@@ -747,7 +707,7 @@ class MarketMaker( object ):
                 #qty = ( prc * qtybtc / con_sz )  
                 qty = self.equity_usd / 48  / 10 / 2
                 qty = float(max( qty, MIN_ORDER_SIZE))
-                max_bad_arb = int(self.MAX_SKEW / 3)
+                max_bad_arb = int(self.MAX_SKEW * 2)
                 # 
                 #print('qty: ' + str(qty))    
                 #print(max_bad_arb)
@@ -762,7 +722,7 @@ class MarketMaker( object ):
                     for xyz in bid_ords:
                         cancel_oids.append( xyz['orderID'] )
 
-                    self.execute_cancels(fut, psize, nbids, nasks, place_bids, place_asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
+                    self.execute_cancels(fut, psize, nbids, nasks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
                         
                     return
                 print(len_bid_ords)
@@ -778,11 +738,19 @@ class MarketMaker( object ):
                 else:
                     try:
                         if qty + self.skew_size <  self.MAX_SKEW:
-                            if self.arbmult[fut]['arb'] > 1 and (self.positions[fut]['size'] - qty <= max_bad_arb ):
+                            if self.arbmult[fut[0:3]]['arb'] > 1 and (self.positions[fut]['size'] - qty <= max_bad_arb ):
+                                if 'ETH' in fut or 'XRP' in fut:
+                                    qty = qty / self.get_bbo(fut[0:3] + 'USD')['bid']
+                                    if 'USD' in fut:
+                                        qty = qty / self.get_multiplier(fut)
                                 buyOrds.append({"symbol":fut, "orderQty":round(qty), "price":prc,"execInst":"ParticipateDoNotInitiate"})
                                 
 
-                            if self.arbmult[fut]['arb'] < 1 :
+                            if self.arbmult[fut[0:3]]['arb'] < 1 :
+                                if 'ETH' in fut or 'XRP' in fut:
+                                    qty = qty / self.get_bbo(fut[0:3] + 'USD')['bid']
+                                    if 'USD' in fut:
+                                        qty = qty / self.get_multiplier(fut)
                                 buyOrds.append({"symbol":fut, "orderQty":round(qty), "price":prc,"execInst":"ParticipateDoNotInitiate"})
 
 
@@ -799,24 +767,28 @@ class MarketMaker( object ):
         print(editOrds)
         if len(editOrds) > 0:
             sleep(len(editOrds) * 0.2)
+            print('edit!')
+            print(editOrds)
             r = self.mex.Order.Order_amendBulk(orders=json.dumps(editOrds)).result()
             #print('amend')
             #print(r)
         if len_bid_ords < len(buyOrds):
             sleep(len(buyOrds) * 0.2)
+            print('buy!')
+            print(buyOrds)
             r = self.mex.Order.Order_newBulk(orders=json.dumps(buyOrds)).result()
             #print('new')
             #print(r)
-        self.execute_cancels(fut, psize, nbids, nasks, place_bids, place_asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
+        self.execute_cancels(fut, psize, nbids, nasks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
                         
-    def execute_offers ( self, fut, psize, nbids, nasks, place_bids, place_asks, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords, askMult, bidMult):
+    def execute_offers ( self, fut, psize, nbids, nasks, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords, askMult, bidMult):
         editOrds = []
         sellOrds = []
         for i in range( 0, MAX_LAYERS  ):
 
             #print('# OFFERS')
 
-            if place_asks and i < nasks:
+            if i < nasks:
 
                 if i > 0:
                     prc = ticksize_ceil( max( asks[ i ], asks[ i - 1 ] + tsz ), tsz )
@@ -826,6 +798,9 @@ class MarketMaker( object ):
                 qty = self.equity_usd / 48  / 10 / 2
 
                 qty = float(max( qty, MIN_ORDER_SIZE))
+                
+                #10
+                
                 max_bad_arb = int(self.MAX_SKEW) * 2
                 #print('qty: ' + str(qty))    
                 #print(max_bad_arb)
@@ -844,26 +819,35 @@ class MarketMaker( object ):
                         cancel_oids.append( xyz['orderID'] )
 
                         
-                    self.execute_cancels(fut, psize, nbids, nasks, place_bids, place_asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
+                    self.execute_cancels(fut, psize, nbids, nasks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
                     return
                 print(len_ask_ords)
                 if len_ask_ords != 0:
                     
                     try:
                         oid = ask_ords[ i ][ 'orderID' ]
-                    
+                        
                         editOrds.append({"orderID":oid, "price": prc})#self.client.edit( oid, qty, prc )
                     except Exception as e:
                         print(e)
                 else:
                     try:
                         if qty * -1 + self.skew_size  > -1 * self.MAX_SKEW * 2:
-                            if self.arbmult[fut]['arb'] >= 1 :
+                            if self.arbmult[fut[0:3]]['arb'] >= 1 :
+                                if 'ETH' in fut or 'XRP' in fut:
+                                    qty = qty / self.get_bbo(fut[0:3] + 'USD')['bid']
+                                    
+                                    if 'USD' in fut:
+                                        qty = qty / self.get_multiplier(fut)
                                 sellOrds.append({"symbol":fut, "orderQty":-1 * round(qty), "price":prc,"execInst":"ParticipateDoNotInitiate"})#self.client.sell( fut, qty, prc, 'true' )
 
                                 
                             
-                            if self.arbmult[fut]['arb'] <= 1 and self.positions[fut]['size'] + qty * -1 >=-1 * max_bad_arb  :
+                            if self.arbmult[fut[0:3]]['arb'] <= 1 and self.positions[fut]['size'] + qty * -1 >=-1 * max_bad_arb  :
+                                if 'ETH' in fut or 'XRP' in fut:
+                                    qty = qty / self.get_bbo(fut[0:3] + 'USD')['bid']
+                                    if 'USD' in fut:
+                                        qty = qty / self.get_multiplier(fut)
                                 sellOrds.append({"symbol":fut, "orderQty":-1 * round(qty), "price":prc,"execInst":"ParticipateDoNotInitiate"})#self.client.sell(  fut, qty, prc, 'true' )
 
                         
@@ -880,16 +864,20 @@ class MarketMaker( object ):
         print(editOrds)
         if len(editOrds) > 0:
             sleep(len(editOrds) * 0.2)
+            print(editOrds)
+            print('edit!')
             r = self.mex.Order.Order_amendBulk(orders=json.dumps(editOrds)).result()
             #print('amend')
             #print(r)
         if len_ask_ords < len(sellOrds):
             sleep(len(sellOrds) * 0.2)
+            print(sellOrds)
+            print('sell!')
             r = self.mex.Order.Order_newBulk(orders=json.dumps(sellOrds)).result()
             #print('new')
             #print(r)
-        self.execute_cancels(fut, psize, nbids, nasks, place_bids, place_asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
-    def execute_cancels(self, fut, psize, nbids, nasks, place_bids, place_asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords):
+        self.execute_cancels(fut, psize, nbids, nasks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
+    def execute_cancels(self, fut, psize, nbids, nasks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords):
         if nbids < len( bid_ords ):
             cancel_oids += [ o[ 'orderID' ] for o in bid_ords[ nbids : ]]
         if nasks < len( ask_ords ):
@@ -933,82 +921,100 @@ class MarketMaker( object ):
                 self.restart()
             
             self.update_positions()
-            bbo     = self.get_bbo( 'XBTUSD' )
-            bid_mkt = bbo[ 'bid' ]
-            ask_mkt = bbo[ 'ask' ]
-            mid = 0.5 * ( bbo[ 'bid' ] + bbo[ 'ask' ] )
             bbos = []
             arbs = {}
             #self.client.buy(  'BTC-PERPETUAL', size, mid * 1.02)
             expdays = {}
             for k in self.futures.keys():
+                bbo     = self.get_bbo( k[0:3] + 'USD' )
+                bid_mkt = bbo[ 'bid' ]
+                ask_mkt = bbo[ 'ask' ]
+                mid = 0.5 * ( bbo[ 'bid' ] + bbo[ 'ask' ] )
+
                 m = self.get_bbo(k)
+                
                 bid = m['bid']
                 ask=m['ask']
                 mid1 = 0.5 * (bid + ask)
+                if k == 'ETHM20' or k == 'XRPM20':
+                    mid1 = mid1 * self.get_spot()
                 arb = mid1 / mid
                 arbs[k] = float(arb)
-                print('perp is ' + str(mid) + ' ' + k + ' is ' + str(mid1) + ' and arb is ' + str(arb)  + ' positive is sell negative is bbuy')
-                print('exp perp is always 3000 yrs')
-                print(self.futures[k]['expi_dt'])
-                print('in seconds')
+                if 'USD' not in k:
+                    print('perp is ' + str(mid) + ' ' + k + ' is ' + str(mid1) + ' and arb is ' + str(arb)  + ' positive is sell negative is bbuy')
+                
                 expsecs = (self.futures[k]['expi_dt'] - datetime.now()).total_seconds()
-                print(expsecs)
-                print('in days')
-                print(expsecs / 60 / 24)
+                
                 expday = expsecs / 60 / 24
                 expdays[k]=float(expday)
                 bbos.append({k: mid1 - self.get_spot()})
+            try:
+                r = random.randint(0, 250)
+                if self.mexfundingfirst == True or r <= 5:
+                    self.mexfundingfirst = False
+                    res = self.mex.Instrument.Instrument_getActive().result()
+                    
+                    for inst in res[0]:
+                        if inst['symbol'] == 'XBTUSD':
+                            self.exchangeRates['XBT'] = float(inst['fundingRate']) * 3
+                        if inst['symbol'] == 'ETHUSD':
+                            self.exchangeRates['ETH'] = float(inst['fundingRate']) * 3
+                        if inst['symbol'] == 'XRPUSD':
+                            self.exchangeRates['XRP'] = float(inst['fundingRate']) * 3
+            except:
+                PrintException()
+            fundvsprem = {}
+            newarbs = {}
             for k in arbs:
-                doin = (-1*(1-arbs[k]) / expdays[k])* 100
-                print(k + ' has a daily arb opportunity of ' + str(doin)  + '%')
-            ##print(bbos)
-            h = 0
-            winner = ""
-            positive = True
-            for bbo in bbos:
-                k = list(bbo.keys())[0]
-                val = list(bbo.values())[0]
-                if math.fabs(val) > h:
-                    h = math.fabs(val)
-                    winner = k
-                    if val > 0:
-                        positive = True
+                if 'USD' not in k:
+                    doin = (-1*(1-arbs[k]) / expdays[k])* 100
+                    print(k[0:3])
+                    print(k + ' has a daily arb opportunity of ' + str(doin)  + '%, funding daily rate is ' + str(self.exchangeRates[k[0:3]]) + '%')
+                    if math.fabs(doin) > math.fabs(self.exchangeRates[k[0:3]]):
+                        print('Premium arb wins! Premium arb is ' + str(math.fabs(doin) - math.fabs(self.exchangeRates[k[0:3]])) + ' % better right now!')
+                        fundvsprem[k[0:3]] = 'premium'
+                        newarbs[k[0:3]] = doin
                     else:
-                        positive = False
+                        print('Funding arb wins! Funding arb is ' + str(math.fabs(self.exchangeRates[k[0:3]]) - math.fabs(doin)) + ' % better right now!')
+                        fundvsprem[k[0:3]] = 'funding' #funding
+                        newarbs[k[0:3]] = self.exchangeRates[k[0:3]]
+                        #longs pay shorts, shorts pay longs
+                        newarbs[k[0:3]] = newarbs[k[0:3]] * -1
+            arbs = newarbs
+            self.arbmult = {}
 
-            if positive == True:
-                losers = []
-                for k in self.futures.keys():
-                    if k != winner:
-                        losers.append(k)
-                for k in self.futures.keys():
-                    if k == winner:
-                        self.arbmult[winner]=({"arb": arbs[k], "long": losers, "short": winner})
-                    else:
-                        self.arbmult[k]=({"arb": arbs[k], "long": losers, "short": winner})
-            else:
-                losers = []
-                for k in self.futures.keys():
-                    if k!= winner:
-                        losers.append(k)
-                for k in self.futures.keys():
-                    if k == winner:
-                        self.arbmult[winner]=({"arb": arbs[k], "long": winner, "short": losers})
-                    else:
-                        self.arbmult[k]=({"arb": arbs[k], "long": winner, "short": losers})
+            for token in arbs:
+                self.arbmult[token] = {}
+            for token in arbs:
+                
+                if arbs[token] < 0:
+                    self.arbmult[token] = ({'coin': token, 'long': 'futs', 'short': 'perp', 'arb': math.fabs(arbs[token])})
+                else:
+                    self.arbmult[token] = ({'coin': token, 'long': 'perp', 'short': 'futs', 'arb': math.fabs(arbs[token])})
+            #funding: {'ETH': {'coin': 'ETH', 'long': 'futs', 'short': 'perp', 'arb': -0.00030000000000000003}, 'XBT': {'coin': 'XBT', 'long': 'perp', 'short': 'futs', 'arb': 0.000153}, 'XRP': {'coin': 'XRP', 'long': 'futs', 'short': 'perp', 'arb': -0.0007440000000000001}}
+            #premium: {'ETH': {'coin': 'ETH', 'long': 'futs', 'short': 'perp', 'arb': -0.00013291636050582245}, 'XBT': {'coin': 'XBT', 'long': 'perp', 'short': 'futs', 'arb': 3.722894995661838e-05}, 'XRP': {'coin': 'XRP', 'long': 'futs', 'short': 'perp', 'arb': -6.462857850516617e-05}}
+            
+            print(self.arbmult)
             t = 0
             c = 0
-            for mult in self.arbmult:
-                t = t + self.arbmult[mult]['arb']
+            for arb in self.arbmult:
+                t = t + self.arbmult[arb]['arb']
+
                 c = c + 1
-            avg = t / c 
-            if avg > 0:#sell, so buy
-                self.arbmult['XBTUSD']['arb'] = 0.99
-            else:
-
-
-                self.arbmult['XBTUSD']['arb'] = 1.01
+            print('t: ' + str(t))
+            
+            for arb in self.arbmult:
+                self.arbmult[arb]['perc'] = round(self.arbmult[arb]['arb'] / t * 1000) / 1000 #* 1.41425
+                
+            print(self.arbmult)
+            
+            
+            for coin in arbs:
+                self.LEV_LIM[coin] = LEVERAGE_MAX
+            for coin in arbs:
+                self.LEV_LIM[coin] = self.LEV_LIM[coin] * self.arbmult[coin]['perc'] 
+            print(self.LEV_LIM)
+            
             skewingpos = 0
             skewingneg = 0
             positionSize = 0
@@ -1023,63 +1029,7 @@ class MarketMaker( object ):
             #print(skewingpos)
             #print(skewingneg)
             #print(self.MAX_SKEW)
-            if positionSize is  0 and (skewingpos is 0 and skewingneg is 0):  
-                if self.testing == True:
-                    print('0 on the dot 111!')
-                #print(self.arbmult)
-                if self.MAX_SKEW != 1:
-                    foundlong = ""
-                    foundshort = ""
-                    for k in self.futures.keys():
-                        if self.arbmult[k]['short'] == 'others' and k == self.arbmult[k]['long']:
-                            foundlong = k
-                        if self.arbmult[k]['long'] == 'others' and k == self.arbmult[k]['short']:
-                            foundshort = k  
-                    #print('foundlong: ' + foundlong)
-                    #print('foundshort: ' + foundshort)
-                    for k in self.futures.keys():
-                        #print('k is '+ k)
-                        bbo     = self.get_bbo( k )
-                        bid_mkt = bbo[ 'bid' ]
-                        ask_mkt = bbo[ 'ask' ]
-                        mid = 0.5 * ( bbo[ 'bid' ] + bbo[ 'ask' ] )
-                        if foundlong != "":
-                            if k == foundlong:
-                                #print('k is foundlong')
-                                prc = ticksize_floor( mid * 1.02, self.get_ticksize( foundlong ) )
-                                if self.testing == True:
-                                    self.returnOrders.append({'buy', foundlong, round(self.MAX_SKEW * 2)/ len(self.futures), mid * 1.02, 'false'})
-                                else: 
-                                    self.client.createOrder(  foundlong, "Limit", 'buy', round(self.MAX_SKEW ) * 2, prc)#buy(  foundlong, round(self.MAX_SKEW * 2)/ len(self.futures), mid * 1.02, 'false' )
-                                
-                            else:
-                                prc = ticksize_floor( mid * 0.98, self.get_ticksize( k ) )
-                                if self.testing == True:
-                                    self.returnOrders.append({ 'sell',  k, round(self.MAX_SKEW ) / len(self.futures), mid * 0.98, 'false' })
-                                else: 
-                                #print('k is not foundlong')
-                                    self.client.createOrder(  k, "Limit", 'sell', round(self.MAX_SKEW ) / len(self.futures), prc)#sell(  k, round(self.MAX_SKEW ) / len(self.futures), mid * 0.98, 'false' )
-                        if foundshort != "":
-                            if k == foundshort:
-                                #print('k is foundshort')
-                                prc = ticksize_floor( mid * 0.98, self.get_ticksize( foundshort ) )
-                                if self.testing == True:
-                                    self.returnOrders.append({ 'sell', foundshort, round(self.MAX_SKEW  * 2)/ len(self.futures), mid * 0.98, 'false' })
-                                else: 
-                                    self.client.createOrder(  foundshort, "Limit", 'sell', -1* round(self.MAX_SKEW ) * 2, prc)#.sell(  foundshort, round(self.MAX_SKEW  * 2)/ len(self.futures), mid * 0.98, 'false' )
-                            else:
-                                prc = ticksize_floor( mid * 1.02, self.get_ticksize( k ) )
-                                if self.testing == True:
-                                    self.returnOrders.append({'buy',  k, round(self.MAX_SKEW ) / len(self.futures), mid * 1.02, 'false'})
-                                else: 
-                                #print('k is not foundshort')
-                                    self.client.createOrder(  k, "Limit", 'buy', round(self.MAX_SKEW ) / len(self.futures), prc)#.buy(  k, round(self.MAX_SKEW ) / len(self.futures), mid * 1.02, 'false' )
-                if self.testing == True:
-                    print('testing, returning')
-                    #print(self.MAX_SKEW)
-                    #print(self.arbmult)
-                    return self.returnOrders
-
+            
             t_now   = datetime.utcnow()
             
             # Update time series and vols
@@ -1215,8 +1165,6 @@ class MarketMaker( object ):
                         self.client.createOrder(  self.positions[p]['instrument'], "Limit", 'buy', size,  mid  * prc)#.buy(  self.positions[p]['instrument'], size, mid * 1.02, 'false' )
             except Exception as e:
                 PrintException()
-            self.predict_5 = 0.5
-            self.predict_1 = 0.5
             self.vols               = OrderedDict()
             sleep(60 * 60 * breakfor)
 
@@ -1353,61 +1301,21 @@ class MarketMaker( object ):
             PrintException()
             sleep(15)
             abc = 123
-        if self.testing == False:
-            old1 = self.predict_1
-            old5 = self.predict_5
-            try:
-                resp = requests.get('http://jare.cloud:8089/predictions').json()
-                print(resp)
-                if resp != 500:
-                    if '1m' in resp: 
-                        self.predict_1 = float(resp['1m'].replace('"',"")) 
-                        self.predict_5 = float(resp['5m'].replace('"',"")) 
-                       # if self.predict_1 > 1:
-                        #    self.predict_1 = old1
-                       # if self.predict_5 > 1:
-                       #     self.predict_5 = old5
-                        if self.predict_1 < 0:
-                            self.predict_1 = old1
-                        if self.predict_5 < 0:
-                            self.predict_5 = old5
-                        ##print(' ')
-                        ##print('New predictions!')
-                        ##print('Predict 1m: ' + str(self.predict_1))
-                        ##print('Predict 5m:' + str(self.predict_5))
-                        ##print(' ')
-            except Exception as e:
-                PrintException()
-                self.predict_1 = 0.5
-                self.predict_5 = 0.5
-                abcd1234 = 1
-            res = requests.get("http://localhost:4448/margin").json()[0]
-            
-            spot    = self.get_spot()
+        
+        res = requests.get("http://localhost:4444/margin").json()[0]
+        
+        spot    = self.get_spot()
 
-            self.equity_btc = res['amount'] / 100000000
-            
-            self.IM = (res['initMargin'] / 100000000 / self.equity_btc * 100)
-            self.IM = (round(self.IM * 1000) / 1000)
-            self.equity_usd = self.equity_btc * spot
-            self.MAX_SKEW = ((self.equity_usd / 2.55) / 10) / len(self.futures) 
+        self.equity_btc = res['marginBalance'] / 100000000
+        
+        self.IM = (res['initMargin'] / 100000000 / self.equity_btc * 100)
+        self.IM = (round(self.IM * 1000) / 1000)
+        self.equity_usd = self.equity_btc * spot
+        self.MAX_SKEW = ((self.equity_usd / 2.55) / 10) / len(self.futures) 
 
-            self.update_positions()
+        self.update_positions()
                     
              
-        else:
-            res = requests.get("http://localhost:4448/margin").json()[0]
-            
-            spot    = self.get_spot()
-
-            self.equity_btc = res['amount'] / 100000000
-            
-            self.IM = (account['initialMargin'] / self.equity_btc * 100)
-            self.IM = (round(self.IM * 1000) / 1000)
-            self.equity_usd = self.equity_btc * spot
-            #self.MAX_SKEW = ((((0.017 - 0.01) / 0.005) * self.equity_usd) / 10) / 3
-
-            self.update_positions()
                     
                  
 
@@ -1426,11 +1334,17 @@ class MarketMaker( object ):
             'instrument': None
         } for f in self.futures.keys() } )
         if self.testing == False:
-            positions = requests.get("http://localhost:4448/position").json()
+            positions = requests.get("http://localhost:4444/position").json()
             for fut in positions:
                 for pos in positions[fut]:
                     size = pos['currentQty']
                     sizeBtc = size / self.get_bbo(fut)['bid']
+                    if fut == 'ETHM20':
+                        size = pos['currentQty'] * self.get_bbo('ETHUSD')['bid']
+                        sizeBtc = size / self.get_bbo('XBTUSD')['bid']
+                    if fut == 'XRPM20':
+                        size = pos['currentQty'] * self.get_bbo('XRPUSD')['bid']
+                        sizeBtc = size / self.get_bbo('XBTUSD')['bid']
                     avgEntry = pos['avgEntryPrice']
                     if avgEntry == None:
                         avgEntry = 0
@@ -1518,9 +1432,9 @@ if __name__ == '__main__':
         #mmbot = MarketMaker( monitor = args.monitor, output = args.output )
         mmbot.run()
     except( KeyboardInterrupt, SystemExit ):
-        print( "Cancelling open orders" )
+        print( "Cancelling op   en orders" )
         if testing == False:
-            mmbot.client.cancelall()
+            mmbot.cancelall()
         sys.exit()
     except:
         print( traceback.format_exc())
