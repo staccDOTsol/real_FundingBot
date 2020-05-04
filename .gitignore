@@ -2,3 +2,6 @@ log*
 __pycache__/keys.txt
 keys.txt
 nohup.out
+node_modules
+node_modules/
+node_modules/*
