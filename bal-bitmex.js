@@ -12,7 +12,7 @@ try {
 }
 
 
-var theurl = "localhost"
+var theurl = process.env.theurl
 mexkey = "yv6QM80H9mAfWKU3w2G3yWi9"
 mexsecret = "gETmwjECccIYwTkly-AJGV__CKtldJ_9YYpQNaZasO6TMnsJ"
 
@@ -130,7 +130,7 @@ setInterval(async function() {
 	    	thecount = 0
 bals['bitmex'] = {}
 	 request.get("http://localhost:4444/margin", async function(e,r,d){
-mex = parseFloat(JSON.parse(d)[0]['amount'])/ 100000000	 
+mex = parseFloat(JSON.parse(d)[0]['marginBalance'])/ 100000000	 
 	 bals['bitmex']['BTC']  = mex
 newbtc2 += mex
 thecount++

@@ -18,11 +18,7 @@ bybit     = ccxt.bybit({
         })
 
 doneYet = []
-ftx     = ccxt.ftx({
-            'enableRateLimit': True,
-            'apiKey': ftxKEY,   
-            'secret': ftxSECRET,
-        })
+
 
 fundingEarned = {}
 fundingEarned['totalsncerun'] = 0	
